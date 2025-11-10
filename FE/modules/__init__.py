@@ -1,0 +1,1 @@
+# Pages package for the accounting system frontend

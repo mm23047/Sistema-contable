@@ -1,0 +1,63 @@
+services:
+  db17:
+    image: postgres:17.5-alpine
+    container_name: contable_db17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres17_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin4_17:
+    image: dpage/pgadmin4
+    container_name: contable_pgadmin4_17
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_LISTEN_PORT: ${PGADMIN_PORT}
+    ports:
+      - "${PGADMIN_PORT}:5050"
+    depends_on:
+      - db17
+
+  backend:
+    build:
+      context: ./BE
+      dockerfile: Dockerfile
+    environment:
+      - PORT_BE=${PORT_BE}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=contable_db17
+      - POSTGRES_PORT=5432
+      - LLM_API_KEY=${LLM_API_KEY}
+    ports:
+      - "${PORT_BE}:${PORT_BE}"
+    depends_on:
+      db17:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./FE
+      dockerfile: Dockerfile
+    environment:
+      - PORT_FE=${PORT_FE}
+      - PORT_BE=${PORT_BE}
+      - BACKEND_URL=http://backend:${PORT_BE}
+    ports:
+      - "${PORT_FE}:${PORT_FE}"
+    depends_on:
+      - backend
+
+volumes:
+  postgres17_data:

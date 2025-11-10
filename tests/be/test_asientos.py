@@ -1,0 +1,186 @@
+"""
+Unit tests for Asientos (Journal Entries) functionality.
+Tests the creation, validation, and business logic for journal entries.
+"""
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from app.main import app
+from app.db import get_db, Base
+from app.models.asiento import Asiento
+from app.models.transaccion import Transaccion
+from app.models.catalogo_cuentas import CatalogoCuentas
+from datetime import datetime
+
+# Configuración de base de datos de prueba
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def override_get_db():
+    try:
+        db = TestingSessionLocal()
+        yield db
+    finally:
+        db.close()
+
+app.dependency_overrides[get_db] = override_get_db
+
+@pytest.fixture
+def client():
+    """Crear cliente de prueba y configurar datos de prueba"""
+    Base.metadata.create_all(bind=engine)
+    
+    # Crear datos de prueba
+    db = TestingSessionLocal()
+    try:
+        # Crear cuenta de prueba
+        test_account = CatalogoCuentas(
+            codigo_cuenta="1001",
+            nombre_cuenta="Caja",
+            tipo_cuenta="Activo"
+        )
+        db.add(test_account)
+        db.commit()
+        db.refresh(test_account)
+        
+        # Create test transaction
+        test_transaction = Transaccion(
+            fecha_transaccion=datetime(2025, 8, 1, 10, 0, 0),
+            descripcion="Test transaction",
+            tipo="INGRESO",
+            moneda="USD",
+            usuario_creacion="test_user"
+        )
+        db.add(test_transaction)
+        db.commit()
+        db.refresh(test_transaction)
+        
+    finally:
+        db.close()
+    
+    with TestClient(app) as test_client:
+        yield test_client
+    
+    Base.metadata.drop_all(bind=engine)
+
+def test_create_asiento_success(client):
+    """Prueba de creación exitosa de asiento contable"""
+    asiento_data = {
+        "id_transaccion": 1,
+        "id_cuenta": 1,
+        "debe": 100.00,
+        "haber": 0.00
+    }
+    
+    response = client.post("/api/asientos/", json=asiento_data)
+    
+    assert response.status_code == 201
+    data = response.json()
+    assert "id_asiento" in data
+    assert isinstance(data["id_asiento"], int)
+
+def test_create_asiento_invalid_transaction(client):
+    """Prueba de creación de asiento contable con transacción inexistente"""
+    asiento_data = {
+        "id_transaccion": 999,  # Non-existent transaction
+        "id_cuenta": 1,
+        "debe": 100.00,
+        "haber": 0.00
+    }
+    
+    response = client.post("/api/asientos/", json=asiento_data)
+    
+    assert response.status_code == 400
+    assert "Transaction not found" in response.text
+
+def test_create_asiento_invalid_account(client):
+    """Prueba de creación de asiento contable con cuenta inexistente"""
+    asiento_data = {
+        "id_transaccion": 1,
+        "id_cuenta": 999,  # Non-existent account
+        "debe": 100.00,
+        "haber": 0.00
+    }
+    
+    response = client.post("/api/asientos/", json=asiento_data)
+    
+    assert response.status_code == 400
+    assert "Account not found" in response.text
+
+def test_create_asiento_both_debe_haber(client):
+    """Prueba de creación de asiento contable con debe y haber > 0 (inválido)"""
+    asiento_data = {
+        "id_transaccion": 1,
+        "id_cuenta": 1,
+        "debe": 100.00,
+        "haber": 50.00  # Both debe and haber > 0 (invalid)
+    }
+    
+    response = client.post("/api/asientos/", json=asiento_data)
+    
+    assert response.status_code == 422  # Pydantic validation error
+
+def test_create_asiento_neither_debe_haber(client):
+    """Prueba de creación de asiento contable con debe y haber = 0 (inválido)"""
+    asiento_data = {
+        "id_transaccion": 1,
+        "id_cuenta": 1,
+        "debe": 0.00,
+        "haber": 0.00  # Both debe and haber = 0 (invalid)
+    }
+    
+    response = client.post("/api/asientos/", json=asiento_data)
+    
+    assert response.status_code == 422  # Pydantic validation error
+
+def test_create_asiento_credit_only(client):
+    """Prueba de creación exitosa de asiento contable solo con haber"""
+    asiento_data = {
+        "id_transaccion": 1,
+        "id_cuenta": 1,
+        "debe": 0.00,
+        "haber": 100.00
+    }
+    
+    response = client.post("/api/asientos/", json=asiento_data)
+    
+    assert response.status_code == 201
+    data = response.json()
+    assert "id_asiento" in data
+
+def test_get_asiento_not_found(client):
+    """Prueba de obtener asiento contable inexistente"""
+    response = client.get("/api/asientos/999")
+    
+    assert response.status_code == 404
+
+def test_list_asientos_by_transaction(client):
+    """Prueba de listar asientos contables filtrados por transacción"""
+    # Create an asiento first
+    asiento_data = {
+        "id_transaccion": 1,
+        "id_cuenta": 1,
+        "debe": 100.00,
+        "haber": 0.00
+    }
+    client.post("/api/asientos/", json=asiento_data)
+    
+    # List asientos for the transaction
+    response = client.get("/api/asientos/", params={"id_transaccion": 1})
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert data[0]["id_transaccion"] == 1
+
+# TODO: Añadir pruebas más completas:
+# - Probar actualizaciones de asientos con validación
+# - Probar eliminación de asientos
+# - Probar filtrado por cuenta
+# - Probar múltiples asientos para la misma transacción
+# - Probar validación de balance entre múltiples asientos
+# - Probar montos negativos (deben fallar)
+# - Probar manejo de precisión decimal
