@@ -5,8 +5,8 @@ Proporciona endpoints para generar reportes contables y exportaciones.
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from app.db import get_db
-from app.services.reporte_service import (
+from BE.app.db import get_db
+from BE.app.services.reporte_service import (
     generar_libro_diario, generar_export_excel, generar_export_html, generar_balance
 )
 from typing import Optional

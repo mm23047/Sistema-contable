@@ -39,7 +39,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_HOST=contable_db17
       - POSTGRES_PORT=5432
-      - LLM_API_KEY=${LLM_API_KEY}
+
     ports:
       - "${PORT_BE}:${PORT_BE}"
     depends_on:
@@ -53,7 +53,6 @@ services:
     environment:
       - PORT_FE=${PORT_FE}
       - PORT_BE=${PORT_BE}
-      - BACKEND_URL=http://backend:${PORT_BE}
     ports:
       - "${PORT_FE}:${PORT_FE}"
     depends_on:

@@ -4,9 +4,9 @@ Proporciona endpoints CRUD para gestionar asientos contables.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from app.db import get_db
-from app.schemas.asiento import AsientoCreate, AsientoRead, AsientoUpdate
-from app.services.asiento_service import (
+from BE.app.db import get_db
+from BE.app.schemas.asiento import AsientoCreate, AsientoRead, AsientoUpdate
+from BE.app.services.asiento_service import (
     create_asiento, get_asiento, get_asientos, update_asiento, delete_asiento
 )
 from typing import List, Optional

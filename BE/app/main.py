@@ -1,12 +1,7 @@
-"""
-Aplicación principal FastAPI para el sistema contable.
-Configura la API, middleware y rutas.
-"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import catalogo_cuentas, transacciones, asientos, reportes
-from app.db import create_tables
-import os
+from BE.app.db import create_tables
+from BE.app.routes import catalogo_cuentas, transacciones, asientos, reportes
 
 # Inicializar aplicación FastAPI
 app = FastAPI(
@@ -15,8 +10,6 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Configurar CORS - Permite todos los orígenes para desarrollo
-# TODO: Configurar orígenes específicos para producción
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

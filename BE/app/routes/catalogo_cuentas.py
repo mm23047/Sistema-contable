@@ -4,9 +4,9 @@ Proporciona endpoints CRUD para gestionar el catálogo de cuentas.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.db import get_db
-from app.schemas.catalogo_cuentas import CatalogoCuentaCreate, CatalogoCuentaRead, CatalogoCuentaUpdate
-from app.services.catalogo_service import (
+from BE.app.db import get_db
+from BE.app.schemas.catalogo_cuentas import CatalogoCuentaCreate, CatalogoCuentaRead, CatalogoCuentaUpdate
+from BE.app.services.catalogo_service import (
     create_cuenta, get_cuenta, get_cuentas, update_cuenta, delete_cuenta
 )
 from typing import List

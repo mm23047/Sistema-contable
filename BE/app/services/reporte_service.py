@@ -4,10 +4,10 @@ Maneja la lógica de negocio para generar reportes contables.
 """
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.models.asiento import Asiento
-from app.models.transaccion import Transaccion
-from app.models.catalogo_cuentas import CatalogoCuentas
-from app.models.periodo import PeriodoContable
+from BE.app.models.asiento import Asiento
+from BE.app.models.transaccion import Transaccion
+from BE.app.models.catalogo_cuentas import CatalogoCuentas
+from BE.app.models.periodo import PeriodoContable
 from typing import List, Dict, Any, Optional
 import pandas as pd
 from io import BytesIO

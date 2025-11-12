@@ -5,8 +5,8 @@ Maneja la lógica de negocio y operaciones de base de datos para cuentas.
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
-from app.models.catalogo_cuentas import CatalogoCuentas
-from app.schemas.catalogo_cuentas import CatalogoCuentaCreate, CatalogoCuentaUpdate
+from BE.app.models.catalogo_cuentas import CatalogoCuentas
+from BE.app.schemas.catalogo_cuentas import CatalogoCuentaCreate, CatalogoCuentaUpdate
 from typing import List, Optional
 
 def create_cuenta(db: Session, cuenta_data: CatalogoCuentaCreate) -> CatalogoCuentas:

@@ -6,14 +6,12 @@ WORKDIR /app
 
 # Copiar requirements e instalar dependencias
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copiar código de la aplicación
 COPY . .
+
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Exponer puerto desde variable de entorno
 ENV PORT_FE=8501
-EXPOSE $PORT_FE
 
 # Comando para ejecutar la aplicación Streamlit
-CMD streamlit run app.py --server.port=$PORT_FE --server.address=0.0.0.0
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]

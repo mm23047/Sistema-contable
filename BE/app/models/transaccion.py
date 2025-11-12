@@ -5,7 +5,7 @@ Define la estructura de la tabla de transacciones.
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.db import Base
+from BE.app.db import Base
 
 class Transaccion(Base):
     __tablename__ = "transacciones"

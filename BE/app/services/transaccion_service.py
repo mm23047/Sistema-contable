@@ -5,9 +5,9 @@ Maneja la lógica de negocio y operaciones de base de datos para transacciones.
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
-from app.models.transaccion import Transaccion
-from app.models.periodo import PeriodoContable
-from app.schemas.transaccion import TransaccionCreate, TransaccionUpdate
+from BE.app.models.transaccion import Transaccion
+from BE.app.models.periodo import PeriodoContable
+from BE.app.schemas.transaccion import TransaccionCreate, TransaccionUpdate
 from typing import List, Optional
 from datetime import datetime
 

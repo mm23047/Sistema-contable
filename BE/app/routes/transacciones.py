@@ -4,9 +4,9 @@ Proporciona endpoints CRUD para gestionar transacciones contables.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from app.db import get_db
-from app.schemas.transaccion import TransaccionCreate, TransaccionRead, TransaccionUpdate
-from app.services.transaccion_service import (
+from BE.app.db import get_db
+from BE.app.schemas.transaccion import TransaccionCreate, TransaccionRead, TransaccionUpdate
+from BE.app.services.transaccion_service import (
     create_transaccion, get_transaccion, get_transacciones, update_transaccion, delete_transaccion
 )
 from typing import List, Optional
