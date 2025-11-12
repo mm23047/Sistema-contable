@@ -126,23 +126,49 @@ def show_export_options(backend_url: str):
                 help="ID del período contable para filtrar. 0 = todos los períodos"
             )
         
-        submitted = st.form_submit_button("📥 Generar y Descargar", type="primary")
+        submitted = st.form_submit_button("📥 Generar Reporte", type="primary")
         
         if submitted:
-            export_report(backend_url, export_format, periodo_id if periodo_id > 0 else None)
+            generate_report_file(backend_url, export_format, periodo_id if periodo_id > 0 else None)
+    
+    # Show download button outside the form if file is ready
+    if 'report_file_data' in st.session_state and 'report_file_info' in st.session_state:
+        file_data = st.session_state.report_file_data
+        file_info = st.session_state.report_file_info
+        
+        st.success(f"✅ Archivo {file_info['format'].upper()} generado exitosamente")
+        
+        # Download button outside of form
+        st.download_button(
+            label=f"📥 Descargar {file_info['format'].upper()}",
+            data=file_data,
+            file_name=file_info['filename'],
+            mime=file_info['mime_type'],
+            type="primary"
+        )
+        
+        # Clear button to reset
+        if st.button("🔄 Generar Nuevo Reporte"):
+            if 'report_file_data' in st.session_state:
+                del st.session_state.report_file_data
+            if 'report_file_info' in st.session_state:
+                del st.session_state.report_file_info
+            st.rerun()
 
-def export_report(backend_url: str, format_type: str, periodo_id: Optional[int] = None):
-    """Exportar reporte en el formato especificado"""
+def generate_report_file(backend_url: str, format_type: str, periodo_id: Optional[int] = None):
+    """Generar archivo de reporte y guardarlo en session_state"""
     try:
         params = {"format": format_type}
         if periodo_id:
             params["periodo_id"] = periodo_id
         
-        response = requests.get(
-            f"{backend_url}/api/reportes/libro-diario/export",
-            params=params,
-            timeout=30  # Longer timeout for file generation
-        )
+        # Show loading message
+        with st.spinner(f"Generando reporte en formato {format_type.upper()}..."):
+            response = requests.get(
+                f"{backend_url}/api/reportes/libro-diario/export",
+                params=params,
+                timeout=30  # Longer timeout for file generation
+            )
         
         if response.status_code == 200:
             # Determine file extension and MIME type
@@ -153,16 +179,15 @@ def export_report(backend_url: str, format_type: str, periodo_id: Optional[int] 
                 file_ext = "html"
                 mime_type = "text/html"
             
-            # Provide download button
-            st.download_button(
-                label=f"📥 Descargar {format_type.upper()}",
-                data=response.content,
-                file_name=f"libro_diario.{file_ext}",
-                mime=mime_type,
-                type="primary"
-            )
+            # Store file data in session state
+            st.session_state.report_file_data = response.content
+            st.session_state.report_file_info = {
+                'format': format_type,
+                'filename': f"libro_diario.{file_ext}",
+                'mime_type': mime_type
+            }
             
-            st.success(f"✅ Archivo {format_type.upper()} generado exitosamente")
+            st.rerun()  # Refresh to show download button
         
         else:
             st.error(f"❌ Error al generar exportación: {response.text}")
