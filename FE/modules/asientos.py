@@ -30,6 +30,11 @@ def render_page(backend_url: str):
     with st.expander("➕ Crear Nuevo Asiento", expanded=True):
         create_asiento_form(backend_url, current_transaction, accounts)
     
+    # Formulario de edición (solo si hay un asiento seleccionado para editar)
+    if 'edit_asiento_id' in st.session_state and 'edit_asiento_data' in st.session_state:
+        with st.expander("✏️ Modificar Asiento", expanded=True):
+            edit_asiento_form(backend_url, accounts)
+    
     st.markdown("---")
     
     # List journal entries for current transaction
@@ -123,6 +128,94 @@ def create_asiento_form(backend_url: str, transaction_id: int, accounts: List[Di
             except requests.exceptions.RequestException as e:
                 st.error(f"❌ Error de conexión: {str(e)}")
 
+def edit_asiento_form(backend_url: str, accounts: List[Dict]):
+    """Formulario para modificar un asiento contable existente"""
+    asiento_data = st.session_state.edit_asiento_data
+    asiento_id = st.session_state.edit_asiento_id
+    
+    if not accounts:
+        st.error("❌ No hay cuentas disponibles. Crea cuentas en el catálogo primero.")
+        return
+    
+    st.info(f"🔄 Modificando Asiento ID: {asiento_id}")
+    
+    # Botón para cancelar edición
+    if st.button("❌ Cancelar Edición de Asiento"):
+        if 'edit_asiento_id' in st.session_state:
+            del st.session_state.edit_asiento_id
+        if 'edit_asiento_data' in st.session_state:
+            del st.session_state.edit_asiento_data
+        st.rerun()
+    
+    with st.form("edit_asiento"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Account selection - pre-select current account
+            account_options = {
+                f"{acc['codigo_cuenta']} - {acc['nombre_cuenta']} ({acc['tipo_cuenta']})": acc['id_cuenta']
+                for acc in accounts
+            }
+            
+            # Find current account display name
+            current_account_id = asiento_data.get('id_cuenta')
+            current_account_display = None
+            for display, id_val in account_options.items():
+                if id_val == current_account_id:
+                    current_account_display = display
+                    break
+            
+            # If not found, use first option as default
+            if current_account_display is None:
+                current_account_display = list(account_options.keys())[0]
+            
+            selected_account_display = st.selectbox(
+                "Cuenta Contable",
+                options=list(account_options.keys()),
+                index=list(account_options.keys()).index(current_account_display),
+                help="Selecciona la cuenta para el asiento"
+            )
+            
+            selected_account_id = account_options[selected_account_display]
+        
+        with col2:
+            # Determine current movement type based on debe/haber values
+            current_debe = float(asiento_data.get('debe', 0))
+            current_haber = float(asiento_data.get('haber', 0))
+            current_amount = current_debe if current_debe > 0 else current_haber
+            current_type_index = 0 if current_debe > 0 else 1
+            
+            # Amount type selection
+            amount_type = st.radio(
+                "Tipo de Movimiento",
+                ["Débito (Debe)", "Crédito (Haber)"],
+                index=current_type_index,
+                help="Selecciona si es un débito o crédito"
+            )
+        
+        # Amount input - pre-filled with current amount
+        amount = st.number_input(
+            "Monto",
+            min_value=0.01,
+            value=float(current_amount) if current_amount > 0 else 0.01,
+            step=0.01,
+            format="%.2f",
+            help="Monto del asiento (debe ser mayor que 0)"
+        )
+        
+        submitted = st.form_submit_button("💾 Guardar Cambios", type="primary")
+        
+        if submitted:
+            # Prepare update data - only include fields that can be modified
+            update_data = {
+                "id_cuenta": selected_account_id,
+                "debe": float(amount) if amount_type.startswith("Débito") else 0.00,
+                "haber": float(amount) if amount_type.startswith("Crédito") else 0.00
+                # Note: id_transaccion is not included as it shouldn't be modified
+            }
+            
+            edit_asiento(backend_url, asiento_id, update_data)
+
 def list_asientos_for_transaction(backend_url: str, transaction_id: int, accounts: List[Dict]):
     """Listar asientos contables para la transacción actual"""
     try:
@@ -182,18 +275,27 @@ def list_asientos_for_transaction(backend_url: str, transaction_id: int, account
             if difference != 0:
                 st.warning("⚠️ Los asientos no están balanceados. El total de débitos debe igual al total de créditos.")
             
-            # Delete asiento functionality
+            # Delete and edit asiento functionality
             st.markdown("---")
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             
             with col1:
                 selected_asiento_id = st.selectbox(
-                    "Eliminar Asiento",
+                    "Seleccionar Asiento",
                     options=[None] + [a['id_asiento'] for a in asientos],
                     format_func=lambda x: "Selecciona..." if x is None else f"Asiento ID: {x}"
                 )
             
             with col2:
+                if st.button("✏️ Modificar Asiento") and selected_asiento_id:
+                    # Encontrar el asiento seleccionado para el formulario de edición
+                    selected_asiento = next((a for a in asientos if a['id_asiento'] == selected_asiento_id), None)
+                    if selected_asiento:
+                        st.session_state.edit_asiento_id = selected_asiento_id
+                        st.session_state.edit_asiento_data = selected_asiento
+                        st.rerun()
+            
+            with col3:
                 if st.button("🗑️ Eliminar Asiento") and selected_asiento_id:
                     delete_asiento(backend_url, selected_asiento_id)
         
@@ -213,6 +315,29 @@ def delete_asiento(backend_url: str, asiento_id: int):
             st.rerun()
         else:
             st.error(f"❌ Error al eliminar asiento: {response.text}")
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ Error de conexión: {str(e)}")
+
+def edit_asiento(backend_url: str, asiento_id: int, asiento_data: dict):
+    """Modificar un asiento contable existente"""
+    try:
+        response = requests.put(
+            f"{backend_url}/api/asientos/{asiento_id}", 
+            json=asiento_data, 
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            st.success(f"✅ Asiento {asiento_id} modificado exitosamente")
+            # Limpiar el estado de edición
+            if 'edit_asiento_id' in st.session_state:
+                del st.session_state.edit_asiento_id
+            if 'edit_asiento_data' in st.session_state:
+                del st.session_state.edit_asiento_data
+            st.rerun()
+        else:
+            st.error(f"❌ Error al modificar asiento: {response.text}")
             
     except requests.exceptions.RequestException as e:
         st.error(f"❌ Error de conexión: {str(e)}")

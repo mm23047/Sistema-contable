@@ -6,7 +6,6 @@ import streamlit as st
 import requests
 import pandas as pd
 from datetime import datetime, date
-from typing import Optional
 
 def render_page(backend_url: str):
     """Renderizar la página de gestión de transacciones"""
@@ -15,6 +14,11 @@ def render_page(backend_url: str):
     # Crear formulario de transacciones
     with st.expander("➕ Crear Nueva Transacción", expanded=True):
         create_transaction_form(backend_url)
+    
+    # Formulario de edición (solo si hay una transacción seleccionada para editar)
+    if 'edit_transaction_id' in st.session_state and 'edit_transaction_data' in st.session_state:
+        with st.expander("✏️ Modificar Transacción", expanded=True):
+            edit_transaction_form(backend_url)
     
     st.markdown("---")
     
@@ -112,6 +116,97 @@ def create_transaction_form(backend_url: str):
             except requests.exceptions.RequestException as e:
                 st.error(f"❌ Error de conexión: {str(e)}")
 
+def edit_transaction_form(backend_url: str):
+    """Formulario para modificar una transacción existente"""
+    transaction_data = st.session_state.edit_transaction_data
+    transaction_id = st.session_state.edit_transaction_id
+    
+    st.info(f"🔄 Modificando Transacción ID: {transaction_id}")
+    
+    # Botón para cancelar edición
+    if st.button("❌ Cancelar Edición"):
+        if 'edit_transaction_id' in st.session_state:
+            del st.session_state.edit_transaction_id
+        if 'edit_transaction_data' in st.session_state:
+            del st.session_state.edit_transaction_data
+        st.rerun()
+    
+    with st.form("edit_transaction"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Parse the existing date from ISO format
+            try:
+                existing_date = datetime.fromisoformat(transaction_data['fecha_transaccion'].replace('Z', '+00:00'))
+            except (ValueError, KeyError):
+                # Fallback to current date if parsing fails
+                existing_date = datetime.now()
+            
+            fecha_transaccion = st.date_input(
+                "Fecha de Transacción",
+                value=existing_date.date(),
+                help="Fecha cuando ocurrió la transacción"
+            )
+            
+            tipo = st.selectbox(
+                "Tipo de Transacción",
+                ["INGRESO", "EGRESO"],
+                index=0 if transaction_data.get('tipo') == 'INGRESO' else 1,
+                help="Tipo de transacción contable"
+            )
+            
+            usuario_creacion = st.text_input(
+                "Usuario",
+                value=transaction_data.get('usuario_creacion', ''),
+                help="Usuario que crea la transacción"
+            )
+        
+        with col2:
+            descripcion = st.text_area(
+                "Descripción",
+                value=transaction_data.get('descripcion', ''),
+                height=100,
+                help="Descripción completa de la transacción"
+            )
+            
+            # List of common currencies with current value selected
+            currencies = ["USD", "EUR", "MXN", "COP"]
+            current_currency = transaction_data.get('moneda', 'USD')
+            currency_index = currencies.index(current_currency) if current_currency in currencies else 0
+            
+            moneda = st.selectbox(
+                "Moneda",
+                currencies,
+                index=currency_index,
+                help="Moneda de la transacción"
+            )
+            
+            # Note: id_periodo is not editable according to requirements
+            st.info(f"📅 Período actual: {transaction_data.get('id_periodo', 'N/A')}")
+        
+        submitted = st.form_submit_button("💾 Guardar Cambios", type="primary")
+        
+        if submitted:
+            if not descripcion or not usuario_creacion:
+                st.error("❌ Descripción y Usuario son campos obligatorios")
+                return
+            
+            # Combine date with existing time for datetime
+            existing_time = existing_date.time()
+            fecha_datetime = datetime.combine(fecha_transaccion, existing_time)
+            
+            # Prepare update data - only include fields that can be modified
+            update_data = {
+                "fecha_transaccion": fecha_datetime.isoformat(),
+                "descripcion": descripcion,
+                "tipo": tipo,
+                "moneda": moneda,
+                "usuario_creacion": usuario_creacion
+                # Note: id_periodo is not included as per requirements
+            }
+            
+            edit_transaction(backend_url, transaction_id, update_data)
+
 def list_transactions(backend_url: str):
     """Listar transacciones existentes en una tabla"""
     try:
@@ -145,7 +240,7 @@ def list_transactions(backend_url: str):
             )
             
             # Action buttons for each transaction
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4 = st.columns(4)
             
             with col1:
                 selected_id = st.selectbox(
@@ -161,6 +256,15 @@ def list_transactions(backend_url: str):
                     st.rerun()
             
             with col3:
+                if st.button("✏️ Modificar") and selected_id:
+                    # Encontrar la transacción seleccionada para el formulario de edición
+                    selected_transaction = next((t for t in transactions if t['id_transaccion'] == selected_id), None)
+                    if selected_transaction:
+                        st.session_state.edit_transaction_id = selected_id
+                        st.session_state.edit_transaction_data = selected_transaction
+                        st.rerun()
+            
+            with col4:
                 if st.button("🗑️ Eliminar") and selected_id:
                     delete_transaction(backend_url, selected_id)
         else:
@@ -182,6 +286,29 @@ def delete_transaction(backend_url: str, transaction_id: int):
             st.rerun()
         else:
             st.error(f"❌ Error al eliminar transacción: {response.text}")
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ Error de conexión: {str(e)}")
+
+def edit_transaction(backend_url: str, transaction_id: int, transaction_data: dict):
+    """Modificar una transacción existente"""
+    try:
+        response = requests.put(
+            f"{backend_url}/api/transacciones/{transaction_id}", 
+            json=transaction_data, 
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            st.success(f"✅ Transacción {transaction_id} modificada exitosamente")
+            # Limpiar el estado de edición
+            if 'edit_transaction_id' in st.session_state:
+                del st.session_state.edit_transaction_id
+            if 'edit_transaction_data' in st.session_state:
+                del st.session_state.edit_transaction_data
+            st.rerun()
+        else:
+            st.error(f"❌ Error al modificar transacción: {response.text}")
             
     except requests.exceptions.RequestException as e:
         st.error(f"❌ Error de conexión: {str(e)}")
