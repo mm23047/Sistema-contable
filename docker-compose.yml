@@ -53,6 +53,8 @@ services:
     environment:
       - PORT_FE=${PORT_FE}
       - PORT_BE=${PORT_BE}
+      - BACKEND_URL=http://backend:${PORT_BE}
+
     ports:
       - "${PORT_FE}:${PORT_FE}"
     depends_on:
