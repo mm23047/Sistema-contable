@@ -7,6 +7,21 @@ import requests
 import pandas as pd
 from datetime import datetime, date
 
+def load_periods(backend_url: str):
+    """Cargar períodos disponibles desde la API"""
+    try:
+        response = requests.get(f"{backend_url}/api/periodos/activos", timeout=10)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"❌ Error al cargar períodos: {response.text}")
+            return []
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ Error de conexión al cargar períodos: {str(e)}")
+        return []
+
 def render_page(backend_url: str):
     """Renderizar la página de gestión de transacciones"""
     st.header("📋 Gestión de Transacciones")
@@ -28,6 +43,9 @@ def render_page(backend_url: str):
 
 def create_transaction_form(backend_url: str):
     """Formulario para crear una nueva transacción"""
+    # Cargar períodos disponibles
+    periods = load_periods(backend_url)
+    
     with st.form("create_transaction"):
         col1, col2 = st.columns(2)
         
@@ -65,19 +83,32 @@ def create_transaction_form(backend_url: str):
                 help="Moneda de la transacción"
             )
             
-            # TODO: Cargar períodos desde la API
-            id_periodo = st.number_input(
-                "ID Período (requerido)",
-                min_value=1,
-                value=1,
-                help="ID del período contable asociado (requerido)"
-            )
+            # Selector de período mejorado
+            if periods:
+                period_options = {}
+                for period in periods:
+                    display_text = f"{period['tipo_periodo']} {period['fecha_inicio']} - {period['fecha_fin']} (ID: {period['id_periodo']})"
+                    period_options[display_text] = period['id_periodo']
+                
+                selected_period_display = st.selectbox(
+                    "Período Contable",
+                    options=list(period_options.keys()),
+                    help="Selecciona el período contable para la transacción"
+                )
+                selected_period_id = period_options[selected_period_display]
+            else:
+                st.error("❌ No se pudieron cargar los períodos disponibles")
+                selected_period_id = None
         
         submitted = st.form_submit_button("Crear Transacción", type="primary")
         
         if submitted:
             if not descripcion or not usuario_creacion:
                 st.error("❌ Descripción y Usuario son campos obligatorios")
+                return
+            
+            if not selected_period_id:
+                st.error("❌ No se pudo seleccionar un período válido")
                 return
             
             # Combine date with current time for datetime
@@ -90,7 +121,7 @@ def create_transaction_form(backend_url: str):
                 "tipo": tipo,
                 "moneda": moneda,
                 "usuario_creacion": usuario_creacion,
-                "id_periodo": id_periodo
+                "id_periodo": selected_period_id
             }
             
             try:
@@ -120,6 +151,9 @@ def edit_transaction_form(backend_url: str):
     """Formulario para modificar una transacción existente"""
     transaction_data = st.session_state.edit_transaction_data
     transaction_id = st.session_state.edit_transaction_id
+    
+    # Cargar períodos para mostrar información descriptiva
+    periods = load_periods(backend_url)
     
     st.info(f"🔄 Modificando Transacción ID: {transaction_id}")
     
@@ -181,8 +215,18 @@ def edit_transaction_form(backend_url: str):
                 help="Moneda de la transacción"
             )
             
-            # Note: id_periodo is not editable according to requirements
-            st.info(f"📅 Período actual: {transaction_data.get('id_periodo', 'N/A')}")
+            # Display current period information in a more user-friendly way
+            current_period_id = transaction_data.get('id_periodo', 'N/A')
+            if periods and current_period_id != 'N/A':
+                # Find the current period in the list
+                current_period = next((p for p in periods if p['id_periodo'] == current_period_id), None)
+                if current_period:
+                    period_display = f"{current_period['tipo_periodo']} {current_period['fecha_inicio']} - {current_period['fecha_fin']}"
+                    st.info(f"📅 Período actual: {period_display} (ID: {current_period_id})")
+                else:
+                    st.info(f"📅 Período actual: ID {current_period_id} (no encontrado en períodos activos)")
+            else:
+                st.info(f"📅 Período actual: ID {current_period_id}")
         
         submitted = st.form_submit_button("💾 Guardar Cambios", type="primary")
         

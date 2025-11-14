@@ -1,7 +1,12 @@
+"""
+Aplicación principal FastAPI para el sistema contable.
+Configura la API, middleware y rutas.
+"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from BE.app.db import create_tables
-from BE.app.routes import catalogo_cuentas, transacciones, asientos, reportes
+from app.routes import catalogo_cuentas, transacciones, asientos, reportes, periodos
+from app.db import create_tables
+import os
 
 # Inicializar aplicación FastAPI
 app = FastAPI(
@@ -10,6 +15,8 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Configurar CORS - Permite todos los orígenes para desarrollo
+# TODO: Configurar orígenes específicos para producción
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,6 +30,7 @@ app.include_router(catalogo_cuentas.router)
 app.include_router(transacciones.router)
 app.include_router(asientos.router)
 app.include_router(reportes.router)
+app.include_router(periodos.router)
 
 @app.on_event("startup")
 def startup_event():
@@ -40,7 +48,8 @@ def read_root():
             "catalogo_cuentas": "/api/catalogo-cuentas",
             "transacciones": "/api/transacciones", 
             "asientos": "/api/asientos",
-            "reportes": "/api/reportes"
+            "reportes": "/api/reportes",
+            "periodos": "/api/periodos"
         }
     }
 

@@ -45,9 +45,9 @@ def exportar_libro_diario(
         # Generate HTML file
         html_content = generar_export_html(db, periodo_id)
         
-        # Return HTML file as download
+        # Return HTML file as download - Convert string to BytesIO for proper streaming
         return StreamingResponse(
-            StringIO(html_content),
+            BytesIO(html_content.encode('utf-8')),
             media_type="text/html",
             headers={"Content-Disposition": "attachment; filename=libro_diario.html"}
         )
