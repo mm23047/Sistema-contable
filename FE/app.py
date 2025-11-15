@@ -4,7 +4,7 @@ Proporciona una interfaz web para gestionar transacciones, asientos contables y 
 """
 import streamlit as st
 import os
-from modules import transacciones, asientos, reportes
+from modules import transacciones, asientos, reportes, facturas
 
 # Configurar ajustes de página
 st.set_page_config(
@@ -25,7 +25,7 @@ st.markdown("---")
 st.sidebar.title("Navegación")
 page = st.sidebar.selectbox(
     "Selecciona una página:",
-    ["Transacciones", "Asientos", "Reportes"]
+    ["Transacciones", "Asientos", "Reportes", "Facturas"]
 )
 
 # Inicializar estado de sesión
@@ -39,6 +39,8 @@ elif page == "Asientos":
     asientos.render_page(BACKEND_URL)
 elif page == "Reportes":
     reportes.render_page(BACKEND_URL)
+elif page == "Facturas":
+    facturas.render_page(BACKEND_URL)
 
 # Mostrar información de transacción actual en sidebar
 if st.session_state.transaccion_actual:
@@ -57,4 +59,8 @@ st.markdown("---")
 st.markdown(
     "📊 Sistema Contable - Flujo: Crear Transacción → Crear Asientos → Reportes",
     help="Sigue el flujo obligatorio: primero crea una transacción, luego los asientos asociados"
+
 )
+
+
+

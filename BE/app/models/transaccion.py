@@ -18,6 +18,7 @@ class Transaccion(Base):
     fecha_creacion = Column(DateTime, nullable=False, default=func.current_timestamp())
     usuario_creacion = Column(String(50), nullable=False)
     id_periodo = Column(Integer, ForeignKey("periodos_contables.id_periodo"))
+    categoria = Column(String, nullable=False)
     
     # Relaciones
     periodo = relationship("PeriodoContable", back_populates="transacciones")

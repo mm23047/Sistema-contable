@@ -1,6 +1,14 @@
 # Dockerfile del Backend para Sistema Contable
 FROM python:3.11-slim
 
+
+# Instalar dependencias del sistema necesarias para reportlab
+RUN apt-get update && apt-get install -y \
+    libfreetype6-dev \
+    libjpeg-dev \
+    libpng-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Optimizaciones para construcción más rápida
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1

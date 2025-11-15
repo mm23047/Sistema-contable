@@ -4,9 +4,9 @@ Proporciona endpoints CRUD para gestionar períodos contables.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.db import get_db
-from app.schemas.periodo import PeriodoCreate, PeriodoRead, PeriodoUpdate
-from app.services.periodo_service import (
+from BE.app.db import get_db
+from BE.app.schemas.periodo import PeriodoCreate, PeriodoRead, PeriodoUpdate
+from BE.app.services.periodo_service import (
     create_periodo, get_periodo, get_periodos, get_periodos_activos, 
     update_periodo, delete_periodo
 )

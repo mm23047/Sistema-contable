@@ -41,111 +41,127 @@ def render_page(backend_url: str):
     st.subheader("📊 Lista de Transacciones")
     list_transactions(backend_url)
 
+
+# (CÓDIGO ORIGINAL OMITIDO ARRIBA PARA NO REPETIR)
+# ─────────────────────────────────────────────────────────
+# SOLO DESDE create_transaction_form HACIA ABAJO
+# ─────────────────────────────────────────────────────────
+
 def create_transaction_form(backend_url: str):
     """Formulario para crear una nueva transacción"""
-    # Cargar períodos disponibles
     periods = load_periods(backend_url)
-    
+
     with st.form("create_transaction"):
         col1, col2 = st.columns(2)
-        
+
         with col1:
             fecha_transaccion = st.date_input(
                 "Fecha de Transacción",
                 value=date.today(),
-                help="Fecha cuando ocurrió la transacción"
             )
-            
-            tipo = st.selectbox(
-                "Tipo de Transacción",
-                ["INGRESO", "EGRESO"],
-                help="Tipo de transacción contable"
-            )
-            
+
+            tipo = st.selectbox("Tipo de Transacción", ["INGRESO", "EGRESO"])
+
             usuario_creacion = st.text_input(
                 "Usuario",
-                placeholder="Nombre del usuario",
-                help="Usuario que crea la transacción"
+                placeholder="Nombre del usuario"
             )
-        
+
         with col2:
             descripcion = st.text_area(
                 "Descripción",
-                placeholder="Descripción detallada de la transacción...",
-                height=100,
-                help="Descripción completa de la transacción"
+                placeholder="Descripción detallada..."
             )
-            
-            moneda = st.selectbox(
-                "Moneda",
-                ["USD", "EUR", "MXN", "COP"],
-                index=0,
-                help="Moneda de la transacción"
+
+            moneda = st.selectbox("Moneda", ["USD", "EUR", "MXN", "COP"])
+
+            categoria = st.selectbox(
+                "Tipo de Categoria",
+                ["VENTA", "COMPRA", "SERVICIO", "OTROS"]
             )
-            
-            # Selector de período mejorado
+
+            # PERIODOS
             if periods:
-                period_options = {}
-                for period in periods:
-                    display_text = f"{period['tipo_periodo']} {period['fecha_inicio']} - {period['fecha_fin']} (ID: {period['id_periodo']})"
-                    period_options[display_text] = period['id_periodo']
-                
+                period_options = {
+                    f"{p['tipo_periodo']} {p['fecha_inicio']} - {p['fecha_fin']} (ID: {p['id_periodo']})": p[
+                        'id_periodo']
+                    for p in periods
+                }
                 selected_period_display = st.selectbox(
                     "Período Contable",
-                    options=list(period_options.keys()),
-                    help="Selecciona el período contable para la transacción"
+                    list(period_options.keys())
                 )
                 selected_period_id = period_options[selected_period_display]
             else:
-                st.error("❌ No se pudieron cargar los períodos disponibles")
+                st.error("❌ No se pudieron cargar los períodos")
                 selected_period_id = None
-        
+
         submitted = st.form_submit_button("Crear Transacción", type="primary")
-        
+
         if submitted:
             if not descripcion or not usuario_creacion:
-                st.error("❌ Descripción y Usuario son campos obligatorios")
+                st.error("❌ Descripción y Usuario son obligatorios")
                 return
-            
+
             if not selected_period_id:
-                st.error("❌ No se pudo seleccionar un período válido")
+                st.error("❌ No se pudo seleccionar período")
                 return
-            
-            # Combine date with current time for datetime
+
             fecha_datetime = datetime.combine(fecha_transaccion, datetime.now().time())
-            
-            # Prepare request data
+
             transaction_data = {
                 "fecha_transaccion": fecha_datetime.isoformat(),
                 "descripcion": descripcion,
                 "tipo": tipo,
                 "moneda": moneda,
                 "usuario_creacion": usuario_creacion,
-                "id_periodo": selected_period_id
+                "id_periodo": selected_period_id,
+                "categoria": categoria
             }
-            
+
             try:
                 response = requests.post(
                     f"{backend_url}/api/transacciones/",
                     json=transaction_data,
                     timeout=10
                 )
-                
+
                 if response.status_code == 201:
                     data = response.json()
                     transaction_id = data.get("id_transaccion")
-                    
-                    # Set current transaction in session state
+                    factura_id = data.get("id_factura")  # 👈 VIENE DEL BACKEND SOLO SI ES VENTA
+
                     st.session_state.transaccion_actual = transaction_id
-                    
-                    st.success(f"✅ Transacción creada exitosamente (ID: {transaction_id})")
+
+                    st.success(f"✅ Transacción creada (ID: {transaction_id})")
+
+                    # ───────────────────────────────────────────────
+                    # 🔥 NUEVO: Mostrar link PDF solo si fue VENTA
+                    # ───────────────────────────────────────────────
+                    if categoria == "VENTA" and factura_id:
+                        st.markdown("### 🧾 Factura generada automáticamente")
+                        st.success("La transacción es de tipo **VENTA**, por lo que se creó una factura asociada.")
+
+                        factura_url = f"{backend_url}/api/facturas/{factura_id}/pdf-fiscal"
+
+                        st.markdown(
+                            f"""
+                            🔗 **Descargar Factura:**  
+                            👉 [**Clic aquí para descargar la factura PDF**]({factura_url})
+                            """,
+                            unsafe_allow_html=True
+                        )
+                    # ───────────────────────────────────────────────
+
                     st.info("💡 Ahora puedes crear asientos para esta transacción")
                     st.rerun()
+
                 else:
                     st.error(f"❌ Error al crear transacción: {response.text}")
-                    
+
             except requests.exceptions.RequestException as e:
                 st.error(f"❌ Error de conexión: {str(e)}")
+
 
 def edit_transaction_form(backend_url: str):
     """Formulario para modificar una transacción existente"""
@@ -202,6 +218,13 @@ def edit_transaction_form(backend_url: str):
                 height=100,
                 help="Descripción completa de la transacción"
             )
+
+            categoria = st.selectbox(
+                "Tipo de Categoria",
+                ["VENTA", "COMPRA", "SERVICIO", "OTROS"],
+                index=0 if transaction_data.get('categoria') == 'VENTA' else 1,
+                help="Tipo de categoria"
+            )
             
             # List of common currencies with current value selected
             currencies = ["USD", "EUR", "MXN", "COP"]
@@ -245,7 +268,8 @@ def edit_transaction_form(backend_url: str):
                 "descripcion": descripcion,
                 "tipo": tipo,
                 "moneda": moneda,
-                "usuario_creacion": usuario_creacion
+                "usuario_creacion": usuario_creacion,
+                "categoria": categoria
                 # Note: id_periodo is not included as per requirements
             }
             
@@ -279,7 +303,7 @@ def list_transactions(backend_url: str):
             
             # Display table
             st.dataframe(
-                df[['id_transaccion', 'fecha_transaccion', 'descripcion', 'tipo', 'moneda', 'usuario_creacion']],
+                df[['id_transaccion', 'fecha_transaccion', 'descripcion', 'tipo', 'moneda', 'usuario_creacion', 'categoria']],
                 use_container_width=True
             )
             

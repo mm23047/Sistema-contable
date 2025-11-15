@@ -5,8 +5,8 @@ Maneja la lógica de negocio y operaciones de base de datos para períodos.
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
-from app.models.periodo import PeriodoContable
-from app.schemas.periodo import PeriodoCreate, PeriodoUpdate
+from BE.app.models.periodo import PeriodoContable
+from BE.app.schemas.periodo import PeriodoCreate, PeriodoUpdate
 from typing import List, Optional
 
 def create_periodo(db: Session, periodo_data: PeriodoCreate) -> PeriodoContable:
