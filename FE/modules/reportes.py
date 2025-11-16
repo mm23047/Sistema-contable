@@ -8,6 +8,21 @@ import pandas as pd
 from io import BytesIO
 from typing import Optional, List, Dict
 
+def load_periods(backend_url: str):
+    """Cargar períodos disponibles desde la API"""
+    try:
+        response = requests.get(f"{backend_url}/api/periodos/activos", timeout=10)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"❌ Error al cargar períodos: {response.text}")
+            return []
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ Error de conexión al cargar períodos: {str(e)}")
+        return []
+
 def render_page(backend_url: str):
     """Renderizar la página de reportes"""
     st.header("📊 Reportes Contables")
@@ -28,21 +43,34 @@ def show_libro_diario(backend_url: str):
     """Mostrar el Libro Diario (General Journal)"""
     st.subheader("📋 Libro Diario")
     
+    # Cargar períodos disponibles
+    periods = load_periods(backend_url)
+    
     # Filters
     col1, col2 = st.columns(2)
     
     with col1:
-        # TODO: Cargar períodos reales desde la API
-        periodo_id = st.number_input(
-            "Filtrar por Período (opcional)",
-            min_value=0,
-            value=0,
-            help="ID del período contable para filtrar. 0 = todos los períodos"
-        )
+        # Selector de período mejorado
+        if periods:
+            # Agregar opción "Todos los períodos" al inicio
+            period_options = {"Todos los períodos": None}
+            for period in periods:
+                display_text = f"{period['tipo_periodo']} {period['fecha_inicio']} - {period['fecha_fin']} (ID: {period['id_periodo']})"
+                period_options[display_text] = period['id_periodo']
+            
+            selected_period_display = st.selectbox(
+                "Filtrar por Período",
+                options=list(period_options.keys()),
+                help="Selecciona el período contable para filtrar los asientos"
+            )
+            selected_period_id = period_options[selected_period_display]
+        else:
+            st.error("❌ No se pudieron cargar los períodos disponibles")
+            selected_period_id = None
     
     with col2:
         if st.button("🔍 Cargar Libro Diario", type="primary"):
-            load_libro_diario(backend_url, periodo_id if periodo_id > 0 else None)
+            load_libro_diario(backend_url, selected_period_id)
 
 def load_libro_diario(backend_url: str, periodo_id: Optional[int] = None):
     """Cargar y mostrar los datos del Libro Diario"""
@@ -106,6 +134,9 @@ def show_export_options(backend_url: str):
     """Mostrar opciones de exportación para reportes"""
     st.subheader("💾 Exportar Reportes")
     
+    # Cargar períodos disponibles
+    periods = load_periods(backend_url)
+    
     # Export form
     with st.form("export_form"):
         col1, col2 = st.columns(2)
@@ -118,31 +149,67 @@ def show_export_options(backend_url: str):
             )
         
         with col2:
-            # TODO: Cargar períodos reales desde la API
-            periodo_id = st.number_input(
-                "Filtrar por Período (opcional)",
-                min_value=0,
-                value=0,
-                help="ID del período contable para filtrar. 0 = todos los períodos"
-            )
+            # Selector de período mejorado
+            if periods:
+                # Agregar opción "Todos los períodos" al inicio
+                period_options = {"Todos los períodos": None}
+                for period in periods:
+                    display_text = f"{period['tipo_periodo']} {period['fecha_inicio']} - {period['fecha_fin']} (ID: {period['id_periodo']})"
+                    period_options[display_text] = period['id_periodo']
+                
+                selected_period_display = st.selectbox(
+                    "Filtrar por Período (opcional)",
+                    options=list(period_options.keys()),
+                    help="Selecciona el período contable para filtrar el reporte"
+                )
+                selected_period_id = period_options[selected_period_display]
+            else:
+                st.error("❌ No se pudieron cargar los períodos disponibles")
+                selected_period_id = None
         
-        submitted = st.form_submit_button("📥 Generar y Descargar", type="primary")
+        submitted = st.form_submit_button("📥 Generar Reporte", type="primary")
         
         if submitted:
-            export_report(backend_url, export_format, periodo_id if periodo_id > 0 else None)
+            generate_report_file(backend_url, export_format, selected_period_id)
+    
+    # Show download button outside the form if file is ready
+    if 'report_file_data' in st.session_state and 'report_file_info' in st.session_state:
+        file_data = st.session_state.report_file_data
+        file_info = st.session_state.report_file_info
+        
+        st.success(f"✅ Archivo {file_info['format'].upper()} generado exitosamente")
+        
+        # Download button outside of form
+        st.download_button(
+            label=f"📥 Descargar {file_info['format'].upper()}",
+            data=file_data,
+            file_name=file_info['filename'],
+            mime=file_info['mime_type'],
+            type="primary"
+        )
+        
+        # Clear button to reset
+        if st.button("🔄 Generar Nuevo Reporte"):
+            if 'report_file_data' in st.session_state:
+                del st.session_state.report_file_data
+            if 'report_file_info' in st.session_state:
+                del st.session_state.report_file_info
+            st.rerun()
 
-def export_report(backend_url: str, format_type: str, periodo_id: Optional[int] = None):
-    """Exportar reporte en el formato especificado"""
+def generate_report_file(backend_url: str, format_type: str, periodo_id: Optional[int] = None):
+    """Generar archivo de reporte y guardarlo en session_state"""
     try:
         params = {"format": format_type}
         if periodo_id:
             params["periodo_id"] = periodo_id
         
-        response = requests.get(
-            f"{backend_url}/api/reportes/libro-diario/export",
-            params=params,
-            timeout=30  # Longer timeout for file generation
-        )
+        # Show loading message
+        with st.spinner(f"Generando reporte en formato {format_type.upper()}..."):
+            response = requests.get(
+                f"{backend_url}/api/reportes/libro-diario/export",
+                params=params,
+                timeout=30  # Longer timeout for file generation
+            )
         
         if response.status_code == 200:
             # Determine file extension and MIME type
@@ -153,16 +220,15 @@ def export_report(backend_url: str, format_type: str, periodo_id: Optional[int] 
                 file_ext = "html"
                 mime_type = "text/html"
             
-            # Provide download button
-            st.download_button(
-                label=f"📥 Descargar {format_type.upper()}",
-                data=response.content,
-                file_name=f"libro_diario.{file_ext}",
-                mime=mime_type,
-                type="primary"
-            )
+            # Store file data in session state
+            st.session_state.report_file_data = response.content
+            st.session_state.report_file_info = {
+                'format': format_type,
+                'filename': f"libro_diario.{file_ext}",
+                'mime_type': mime_type
+            }
             
-            st.success(f"✅ Archivo {format_type.upper()} generado exitosamente")
+            st.rerun()  # Refresh to show download button
         
         else:
             st.error(f"❌ Error al generar exportación: {response.text}")
@@ -174,21 +240,33 @@ def show_balance_report(backend_url: str):
     """Mostrar reporte de balance por período"""
     st.subheader("⚖️ Balance por Período")
     
+    # Cargar períodos disponibles
+    periods = load_periods(backend_url)
+    
     # Period selection
     col1, col2 = st.columns(2)
     
     with col1:
-        # TODO: Cargar períodos reales desde la API y crear selectbox
-        periodo_id = st.number_input(
-            "Período para Balance",
-            min_value=1,
-            value=1,
-            help="ID del período contable para generar balance"
-        )
+        # Selector de período mejorado (requerido para balance)
+        if periods:
+            period_options = {}
+            for period in periods:
+                display_text = f"{period['tipo_periodo']} {period['fecha_inicio']} - {period['fecha_fin']} (ID: {period['id_periodo']})"
+                period_options[display_text] = period['id_periodo']
+            
+            selected_period_display = st.selectbox(
+                "Período para Balance",
+                options=list(period_options.keys()),
+                help="Selecciona el período contable para generar el balance (requerido)"
+            )
+            selected_period_id = period_options[selected_period_display]
+        else:
+            st.error("❌ No se pudieron cargar los períodos disponibles")
+            selected_period_id = None
     
     with col2:
-        if st.button("📊 Generar Balance", type="primary"):
-            load_balance_report(backend_url, periodo_id)
+        if st.button("📊 Generar Balance", type="primary") and selected_period_id:
+            load_balance_report(backend_url, selected_period_id)
 
 def load_balance_report(backend_url: str, periodo_id: int):
     """Cargar y mostrar reporte de balance"""

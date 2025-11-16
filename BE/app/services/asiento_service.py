@@ -5,10 +5,10 @@ Maneja la lógica de negocio y operaciones de base de datos para asientos contab
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
-from app.models.asiento import Asiento
-from app.models.transaccion import Transaccion
-from app.models.catalogo_cuentas import CatalogoCuentas
-from app.schemas.asiento import AsientoCreate, AsientoUpdate
+from BE.app.models.asiento import Asiento
+from BE.app.models.transaccion import Transaccion
+from BE.app.models.catalogo_cuentas import CatalogoCuentas
+from BE.app.schemas.asiento import AsientoCreate, AsientoUpdate
 from typing import List, Optional
 from decimal import Decimal
 

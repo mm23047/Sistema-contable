@@ -6,10 +6,10 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.main import app
-from app.db import get_db, Base
-from app.models.transaccion import Transaccion
-from app.models.periodo import PeriodoContable
+from BE.app.main import app
+from BE.app.db import get_db, Base
+from BE.app.models.transaccion import Transaccion
+from BE.app.models.periodo import PeriodoContable
 from datetime import datetime
 
 # Configuración de base de datos de pruebas

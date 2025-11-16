@@ -5,7 +5,7 @@ Define la estructura de la tabla de transacciones.
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.db import Base
+from BE.app.db import Base
 
 class Transaccion(Base):
     __tablename__ = "transacciones"
@@ -18,6 +18,7 @@ class Transaccion(Base):
     fecha_creacion = Column(DateTime, nullable=False, default=func.current_timestamp())
     usuario_creacion = Column(String(50), nullable=False)
     id_periodo = Column(Integer, ForeignKey("periodos_contables.id_periodo"))
+    categoria = Column(String, nullable=False)
     
     # Relaciones
     periodo = relationship("PeriodoContable", back_populates="transacciones")

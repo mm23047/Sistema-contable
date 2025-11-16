@@ -4,7 +4,9 @@ Define la estructura de la tabla de asientos contables.
 """
 from sqlalchemy import Column, Integer, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
-from app.db import Base
+
+from BE.app.db import Base
+
 
 class Asiento(Base):
     __tablename__ = "asientos"

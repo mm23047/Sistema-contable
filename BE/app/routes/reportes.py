@@ -5,8 +5,8 @@ Proporciona endpoints para generar reportes contables y exportaciones.
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from app.db import get_db
-from app.services.reporte_service import (
+from BE.app.db import get_db
+from BE.app.services.reporte_service import (
     generar_libro_diario, generar_export_excel, generar_export_html, generar_balance
 )
 from typing import Optional
@@ -45,9 +45,9 @@ def exportar_libro_diario(
         # Generate HTML file
         html_content = generar_export_html(db, periodo_id)
         
-        # Return HTML file as download
+        # Return HTML file as download - Convert string to BytesIO for proper streaming
         return StreamingResponse(
-            StringIO(html_content),
+            BytesIO(html_content.encode('utf-8')),
             media_type="text/html",
             headers={"Content-Disposition": "attachment; filename=libro_diario.html"}
         )

@@ -13,6 +13,7 @@ class TransaccionBase(BaseModel):
     moneda: str = Field(default="USD", min_length=3, max_length=3, description="Código de moneda")
     usuario_creacion: str = Field(..., min_length=1, max_length=50, description="Usuario que creó la transacción")
     id_periodo: int = Field(..., description="ID del período contable asociado (requerido)")
+    categoria: str = Field(..., pattern="^(VENTA|COMPRA|SERVICIO|OTRO)$", description="Tipo de Categoria"    )
 
 class TransaccionCreate(TransaccionBase):
     pass
@@ -24,10 +25,14 @@ class TransaccionUpdate(BaseModel):
     moneda: Optional[str] = Field(None, min_length=3, max_length=3)
     usuario_creacion: Optional[str] = Field(None, min_length=1, max_length=50)
     id_periodo: Optional[int] = None
+    categoria: Optional[str] = Field(None, pattern="^(VENTA|COMPRA|SERVICIO|OTRO)$")
 
 class TransaccionRead(TransaccionBase):
     id_transaccion: int
     fecha_creacion: datetime
+
     
     class Config:
         from_attributes = True
+
+
