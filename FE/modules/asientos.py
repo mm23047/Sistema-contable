@@ -285,9 +285,9 @@ def list_asientos_for_transaction(backend_url: str, transaction_id: int, account
 
             for asiento in asientos:
                 account_info = account_map.get(asiento['id_cuenta'], {})
-                asiento['codigo_cuenta'] = account_info.get('codigo_cuenta', 'N/A')
-                asiento['nombre_cuenta'] = account_info.get('nombre_cuenta', 'N/A')
-                asiento['tipo_cuenta'] = account_info.get('tipo_cuenta', 'N/A')
+                asiento['codigo_cuenta'] = str(account_info.get('codigo_cuenta', 'N/A'))
+                asiento['nombre_cuenta'] = str(account_info.get('nombre_cuenta', 'N/A'))
+                asiento['tipo_cuenta'] = str(account_info.get('tipo_cuenta', 'N/A'))
 
             # Convert to DataFrame
             df = pd.DataFrame(asientos)

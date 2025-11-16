@@ -12,54 +12,36 @@ from datetime import datetime
 
 
 # ---------------------------------------------------
-# 🟦 FUNCIÓN: crear factura automática para VENTAS
+# 🟦 Obtener siguiente número correlativo de factura
 # ---------------------------------------------------
-def crear_factura_automatica(db: Session, transaccion: Transaccion):
-    # 1. Obtener número correlativo
-    ultimo_numero = (
+def obtener_siguiente_numero_factura(db: Session):
+    ultima = (
         db.query(Factura)
         .order_by(Factura.numero_factura.desc())
         .first()
     )
-    nuevo_numero = 1 if ultimo_numero is None else ultimo_numero.numero_factura + 1
 
-    # 2. Cargar los asientos de la transacción
-    asientos = db.query(Asiento).filter(
-        Asiento.id_transaccion == transaccion.id_transaccion
-    ).all()
+    if ultima is None:
+        return 1
 
-    if not asientos:
+    # numero_factura llega como string, por eso se convierte a int
+    try:
+        ultimo_num = int(ultima.numero_factura)
+    except:
         raise HTTPException(
             status_code=400,
-            detail="No se pueden generar facturas: la transacción no tiene asientos."
+            detail=f"Error: numero_factura '{ultima.numero_factura}' no es numérico."
         )
 
-    # 3. Calcular monto_total = SUMA(debe + haber)
-    monto_total = sum(
-        float(a.debe or 0) + float(a.haber or 0)
-        for a in asientos
-    )
-
-    # 4. Crear factura
-    factura = Factura(
-        id_transaccion=transaccion.id_transaccion,
-        numero_factura=nuevo_numero,
-        cliente=transaccion.usuario_creacion,  # <-- nombre del cliente/usuario
-        monto_total=monto_total,
-        fecha_emision=datetime.now()
-    )
-
-    db.add(factura)
-    db.commit()
-    db.refresh(factura)
-    return factura
+    return ultimo_num + 1
 
 
 # ---------------------------------------------------
-# 🟦 CREAR TRANSACCIÓN (SIN validar asientos)
+# 🟦 CREAR TRANSACCIÓN
 # ---------------------------------------------------
 def create_transaccion(db: Session, transaccion_data: TransaccionCreate) -> Transaccion:
-    # Validar período si se envía
+
+    # Validar período si aplica
     if transaccion_data.id_periodo:
         periodo = db.query(PeriodoContable).filter(
             PeriodoContable.id_periodo == transaccion_data.id_periodo
@@ -72,10 +54,8 @@ def create_transaccion(db: Session, transaccion_data: TransaccionCreate) -> Tran
 
     transaccion_dict = transaccion_data.dict()
     transaccion_dict["fecha_creacion"] = datetime.now()
-    # ❌ REMOVIDO: No agregar factura_creada aquí
 
     try:
-        # Crear transacción sin validar asientos
         db_transaccion = Transaccion(**transaccion_dict)
         db.add(db_transaccion)
         db.commit()
@@ -97,26 +77,14 @@ def create_transaccion(db: Session, transaccion_data: TransaccionCreate) -> Tran
 
 
 # ---------------------------------------------------
-# 🟦 AGREGAR ASIENTO Y GENERAR FACTURA SI APLICA
+# 🟦 AGREGAR ASIENTO Y GENERAR UNA FACTURA POR ASIENTO
 # ---------------------------------------------------
 def agregar_asiento_y_generar_factura(db: Session, asiento_data: dict, id_transaccion: int) -> Asiento:
-    """
-    Agrega un asiento a una transacción.
-    Si la transacción es de tipo VENTA y NO tiene factura aún,
-    genera automáticamente la factura.
-    """
 
-    # Obtener la transacción
     transaccion = get_transaccion(db, id_transaccion)
 
-    if not transaccion:
-        raise HTTPException(
-            status_code=404,
-            detail="Transacción no encontrada"
-        )
-
     try:
-        # Crear el asiento
+        # Crear asiento
         asiento_dict = asiento_data.copy() if isinstance(asiento_data, dict) else asiento_data.dict()
         asiento_dict["id_transaccion"] = id_transaccion
 
@@ -125,19 +93,28 @@ def agregar_asiento_y_generar_factura(db: Session, asiento_data: dict, id_transa
         db.commit()
         db.refresh(db_asiento)
 
-        # Si es VENTA → generar factura automática
+        # ---------------------------------------------------
+        # 🧾 Generar factura por cada asiento si es VENTA
+        # ---------------------------------------------------
         if transaccion.categoria == "VENTA":
-            # Verificar si ya existe factura para esta transacción
-            factura_existente = db.query(Factura).filter(
-                Factura.id_transaccion == id_transaccion
-            ).first()
 
-            if not factura_existente:
-                try:
-                    factura = crear_factura_automatica(db, transaccion)
-                except HTTPException as e:
-                    # Si hay error al crear factura, no detener el proceso del asiento
-                    print(f"Advertencia: {e.detail}")
+            # Calcular monto del asiento
+            monto_total = float(asiento_dict.get("debe", 0) or 0) + float(asiento_dict.get("haber", 0) or 0)
+
+            # Obtener correlativo
+            nuevo_numero = obtener_siguiente_numero_factura(db)
+
+            factura = Factura(
+                id_transaccion=id_transaccion,
+                numero_factura=str(nuevo_numero),   # se guarda como string
+                cliente=transaccion.usuario_creacion,
+                monto_total=monto_total,
+                fecha_emision=datetime.now()
+            )
+
+            db.add(factura)
+            db.commit()
+            db.refresh(factura)
 
         return db_asiento
 
@@ -156,30 +133,9 @@ def agregar_asiento_y_generar_factura(db: Session, asiento_data: dict, id_transa
 
 
 # ---------------------------------------------------
-# FUNCIÓN AUXILIAR: Generar factura manualmente si es necesario
+# 🔍 Obtener transacción
 # ---------------------------------------------------
-def generar_factura_manual(db: Session, id_transaccion: int) -> Factura:
-    """
-    Genera manualmente una factura para una transacción de VENTA.
-    Útil si la generación automática falló o quieres regenerar.
-    """
-    transaccion = get_transaccion(db, id_transaccion)
-
-    if transaccion.categoria != "VENTA":
-        raise HTTPException(
-            status_code=400,
-            detail="Solo se pueden generar facturas para transacciones de tipo VENTA"
-        )
-
-    return crear_factura_automatica(db, transaccion)
-
-
-# ---------------------------------------------------
-# RESTO DEL CÓDIGO SIN CAMBIOS
-# ---------------------------------------------------
-
 def get_transaccion(db: Session, transaccion_id: int) -> Optional[Transaccion]:
-    """Obtener una transacción específica por ID"""
     transaccion = db.query(Transaccion).filter(
         Transaccion.id_transaccion == transaccion_id
     ).first()
@@ -191,6 +147,9 @@ def get_transaccion(db: Session, transaccion_id: int) -> Optional[Transaccion]:
     return transaccion
 
 
+# ---------------------------------------------------
+# 🔍 Listar transacciones
+# ---------------------------------------------------
 def get_transacciones(
         db: Session,
         skip: int = 0,
@@ -201,7 +160,7 @@ def get_transacciones(
         tipo: Optional[str] = None,
         categoria: Optional[str] = None
 ) -> List[Transaccion]:
-    """Obtener transacciones con filtros opcionales"""
+
     query = db.query(Transaccion)
 
     if fecha_from:
@@ -218,12 +177,14 @@ def get_transacciones(
     return query.offset(skip).limit(limit).all()
 
 
+# ---------------------------------------------------
+# 🟧 Actualizar transacción
+# ---------------------------------------------------
 def update_transaccion(db: Session, transaccion_id: int, transaccion_data: TransaccionUpdate) -> Transaccion:
-    """Actualizar una transacción existente"""
+
     transaccion = get_transaccion(db, transaccion_id)
     update_data = transaccion_data.dict(exclude_unset=True)
 
-    # Validar período si se está actualizando
     if 'id_periodo' in update_data and update_data['id_periodo']:
         periodo = db.query(PeriodoContable).filter(
             PeriodoContable.id_periodo == update_data['id_periodo']
@@ -240,6 +201,7 @@ def update_transaccion(db: Session, transaccion_id: int, transaccion_data: Trans
         db.commit()
         db.refresh(transaccion)
         return transaccion
+
     except IntegrityError:
         db.rollback()
         raise HTTPException(
@@ -248,8 +210,10 @@ def update_transaccion(db: Session, transaccion_id: int, transaccion_data: Trans
         )
 
 
+# ---------------------------------------------------
+# 🟥 Eliminar transacción
+# ---------------------------------------------------
 def delete_transaccion(db: Session, transaccion_id: int) -> bool:
-    """Eliminar una transacción"""
     transaccion = get_transaccion(db, transaccion_id)
     db.delete(transaccion)
     db.commit()
