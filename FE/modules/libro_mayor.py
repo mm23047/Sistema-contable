@@ -9,7 +9,6 @@ import requests
 import pandas as pd
 from io import BytesIO
 from typing import Optional, List, Dict
-import os
 
 def render_page(backend_url: str):
     """Renderizar la página de Libro Mayor"""
@@ -39,9 +38,32 @@ def _consultar_api_libro_mayor(backend_url: str, digitos: int, fecha_inicio: Opt
     try:
         resp = requests.get(f"{backend_url}/api/libro_mayor", params=params, timeout=timeout)
         resp.raise_for_status()
-        return resp.json().get("mayores", [])
+        data = resp.json()
+        
+        # Validar estructura de respuesta
+        if not isinstance(data, dict) or "mayores" not in data:
+            st.error("❌ Respuesta del servidor inválida")
+            return None
+            
+        return data.get("mayores", [])
+    except requests.exceptions.Timeout:
+        st.error("⏱️ Tiempo de espera agotado. El servidor tardó demasiado en responder.")
+        return None
+    except requests.exceptions.ConnectionError:
+        st.error("🔌 Error de conexión. Verifica que el backend esté ejecutándose.")
+        return None
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 400:
+            try:
+                error_detail = e.response.json().get("detail", "Error de validación")
+                st.error(f"❌ Error de validación: {error_detail}")
+            except:
+                st.error("❌ Error de validación en los parámetros")
+        else:
+            st.error(f"❌ Error del servidor: {e.response.status_code}")
+        return None
     except requests.exceptions.RequestException as e:
-        st.error(f"❌ Error al consultar backend: {e}")
+        st.error(f"❌ Error inesperado: {e}")
         return None
 
 
@@ -220,8 +242,13 @@ def exportar_libro_mayor(backend_url: str):
                             "total_haber": s["total_haber"],
                             "saldo": s["saldo"]
                         })
-                df_subs = pd.DataFrame(filas)
-                df_subs.to_excel(writer, sheet_name="Subcuentas", index=False)
+                if filas:
+                    df_subs = pd.DataFrame(filas)
+                    df_subs.to_excel(writer, sheet_name="Subcuentas", index=False)
+                else:
+                    # Crear DataFrame vacío con columnas esperadas
+                    df_empty = pd.DataFrame(columns=["codigo_mayor", "codigo_subcuenta", "nombre_subcuenta", "total_debe", "total_haber", "saldo"])
+                    df_empty.to_excel(writer, sheet_name="Subcuentas", index=False)
 
             buffer.seek(0)
             st.download_button(
@@ -246,9 +273,12 @@ def exportar_libro_mayor(backend_url: str):
                         "total_haber": s["total_haber"],
                         "saldo": s["saldo"]
                     })
-            df_subs = pd.DataFrame(filas)
             html += "<h2>Subcuentas</h2>"
-            html += df_subs.to_html(index=False)
+            if filas:
+                df_subs = pd.DataFrame(filas)
+                html += df_subs.to_html(index=False)
+            else:
+                html += "<p>No se encontraron subcuentas para los criterios seleccionados.</p>"
 
             st.download_button(
                 label="📥 Descargar HTML",
