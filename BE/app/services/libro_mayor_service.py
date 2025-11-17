@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi import HTTPException
-from app.models.asiento import Asiento
-from app.models.catalogo_cuentas import CatalogoCuentas
-from app.models.transaccion import Transaccion
+from BE.app.models.asiento import Asiento
+from BE.app.models.catalogo_cuentas import CatalogoCuentas
+from BE.app.models.transaccion import Transaccion
 from typing import Optional, Dict, List, Any
 from datetime import date
 from decimal import Decimal

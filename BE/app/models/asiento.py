@@ -10,6 +10,7 @@ from BE.app.db import Base
 
 class Asiento(Base):
     __tablename__ = "asientos"
+    __table_args__ = {'extend_existing': True}
     
     id_asiento = Column(Integer, primary_key=True, autoincrement=True)
     id_transaccion = Column(Integer, ForeignKey("transacciones.id_transaccion"), nullable=False)

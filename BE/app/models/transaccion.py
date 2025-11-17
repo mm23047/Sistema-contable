@@ -9,6 +9,7 @@ from BE.app.db import Base
 
 class Transaccion(Base):
     __tablename__ = "transacciones"
+    __table_args__ = {'extend_existing': True}
     
     id_transaccion = Column(Integer, primary_key=True, autoincrement=True)
     fecha_transaccion = Column(DateTime, nullable=False)

@@ -4,12 +4,12 @@ Proporciona endpoints para generar el libro mayor con agrupación por cuentas ma
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from app.db import get_db
-from app.services.libro_mayor_service import (
+from BE.app.db import get_db
+from BE.app.services.libro_mayor_service import (
     generar_libro_mayor_completo, 
     obtener_resumen_por_digitos
 )
-from app.schemas.libro_mayor import LibroMayorResponse
+from BE.app.schemas.libro_mayor import LibroMayorResponse
 from typing import Optional
 from datetime import date
 

@@ -94,13 +94,13 @@ def mostrar_resumen(backend_url: str):
             st.info("📭 No se encontraron cuentas para los filtros seleccionados.")
             return
 
-        # DataFrame resumen
+        # DataFrame resumen - convertir valores a float
         df = pd.DataFrame([{
             "codigo_mayor": m["codigo_mayor"],
             "nombre_mayor": m["nombre_mayor"],
-            "total_debe": m["total_debe"],
-            "total_haber": m["total_haber"],
-            "saldo": m["saldo"]
+            "total_debe": float(m["total_debe"]) if m["total_debe"] else 0.0,
+            "total_haber": float(m["total_haber"]) if m["total_haber"] else 0.0,
+            "saldo": float(m["saldo"]) if m["saldo"] else 0.0
         } for m in mayores])
 
         # Mostrar métricas generales
@@ -127,8 +127,13 @@ def mostrar_resumen(backend_url: str):
         st.markdown("---")
         st.subheader("Detalle por cuenta mayor")
         for m in mayores:
-            with st.expander(f"{m['codigo_mayor']} — {m['nombre_mayor']}  |  Saldo: {m['saldo']}"):
-                st.write(f"Total Debe: {m['total_debe']} — Total Haber: {m['total_haber']}")
+            # Convertir valores a float para formato
+            saldo = float(m['saldo']) if m['saldo'] else 0.0
+            total_debe = float(m['total_debe']) if m['total_debe'] else 0.0
+            total_haber = float(m['total_haber']) if m['total_haber'] else 0.0
+            
+            with st.expander(f"{m['codigo_mayor']} — {m['nombre_mayor']}  |  Saldo: ${saldo:,.2f}"):
+                st.write(f"Total Debe: ${total_debe:,.2f} — Total Haber: ${total_haber:,.2f}")
                 if m.get("subcuentas"):
                     sdf = pd.DataFrame(m["subcuentas"])
                     sdf = sdf[["codigo_cuenta", "nombre_cuenta", "total_debe", "total_haber", "saldo"]]
@@ -178,9 +183,9 @@ def mostrar_subcuentas(backend_url: str):
                     "codigo_mayor": m["codigo_mayor"],
                     "codigo_subcuenta": s["codigo_cuenta"],
                     "nombre_subcuenta": s["nombre_cuenta"],
-                    "debe": s["total_debe"],
-                    "haber": s["total_haber"],
-                    "saldo": s["saldo"]
+                    "debe": float(s["total_debe"]) if s["total_debe"] else 0.0,
+                    "haber": float(s["total_haber"]) if s["total_haber"] else 0.0,
+                    "saldo": float(s["saldo"]) if s["saldo"] else 0.0
                 })
         if not filas:
             st.info("No se encontraron subcuentas para los criterios.")
@@ -219,9 +224,9 @@ def exportar_libro_mayor(backend_url: str):
         df_mayores = pd.DataFrame([{
             "codigo_mayor": m["codigo_mayor"],
             "nombre_mayor": m["nombre_mayor"],
-            "total_debe": m["total_debe"],
-            "total_haber": m["total_haber"],
-            "saldo": m["saldo"]
+            "total_debe": float(m["total_debe"]) if m["total_debe"] else 0.0,
+            "total_haber": float(m["total_haber"]) if m["total_haber"] else 0.0,
+            "saldo": float(m["saldo"]) if m["saldo"] else 0.0
         } for m in mayores])
 
         if formato == "excel":
@@ -238,9 +243,9 @@ def exportar_libro_mayor(backend_url: str):
                             "codigo_mayor": m["codigo_mayor"],
                             "codigo_subcuenta": s["codigo_cuenta"],
                             "nombre_subcuenta": s["nombre_cuenta"],
-                            "total_debe": s["total_debe"],
-                            "total_haber": s["total_haber"],
-                            "saldo": s["saldo"]
+                            "total_debe": float(s["total_debe"]) if s["total_debe"] else 0.0,
+                            "total_haber": float(s["total_haber"]) if s["total_haber"] else 0.0,
+                            "saldo": float(s["saldo"]) if s["saldo"] else 0.0
                         })
                 if filas:
                     df_subs = pd.DataFrame(filas)

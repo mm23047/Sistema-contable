@@ -7,6 +7,7 @@ from BE.app.db import Base
 
 class CatalogoCuentas(Base):
     __tablename__ = "catalogo_cuentas"
+    __table_args__ = {'extend_existing': True}
     
     id_cuenta = Column(Integer, primary_key=True, autoincrement=True)
     codigo_cuenta = Column(String(20), unique=True, nullable=False, index=True)
