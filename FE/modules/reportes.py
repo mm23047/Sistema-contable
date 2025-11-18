@@ -244,29 +244,27 @@ def show_balance_report(backend_url: str):
     periods = load_periods(backend_url)
     
     # Period selection
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Selector de período mejorado (requerido para balance)
-        if periods:
-            period_options = {}
-            for period in periods:
-                display_text = f"{period['tipo_periodo']} {period['fecha_inicio']} - {period['fecha_fin']} (ID: {period['id_periodo']})"
-                period_options[display_text] = period['id_periodo']
-            
-            selected_period_display = st.selectbox(
-                "Período para Balance",
-                options=list(period_options.keys()),
-                help="Selecciona el período contable para generar el balance (requerido)"
-            )
-            selected_period_id = period_options[selected_period_display]
-        else:
-            st.error("❌ No se pudieron cargar los períodos disponibles")
-            selected_period_id = None
-    
-    with col2:
-        if st.button("📊 Generar Balance", type="primary") and selected_period_id:
-            load_balance_report(backend_url, selected_period_id)
+    if periods:
+        period_options = {}
+        for period in periods:
+            display_text = f"{period['tipo_periodo']} {period['fecha_inicio']} - {period['fecha_fin']} (ID: {period['id_periodo']})"
+            period_options[display_text] = period['id_periodo']
+        
+        selected_period_display = st.selectbox(
+            "Período para Balance",
+            options=list(period_options.keys()),
+            help="Selecciona el período contable para generar el balance (requerido)"
+        )
+        selected_period_id = period_options[selected_period_display]
+        
+        # Botón centrado debajo del selector
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            if st.button("📊 Generar Balance", type="primary", use_container_width=True):
+                load_balance_report(backend_url, selected_period_id)
+    else:
+        st.error("❌ No se pudieron cargar los períodos disponibles")
+        selected_period_id = None
 
 def load_balance_report(backend_url: str, periodo_id: int):
     """Cargar y mostrar reporte de balance"""
@@ -286,34 +284,59 @@ def load_balance_report(backend_url: str, periodo_id: int):
                 st.info(f"📭 No hay datos de balance para el período {periodo_id}")
                 return
             
-            # Display period info
-            st.info(f"📅 Balance para Período ID: {periodo_id}")
+            # Display period info (centered)
+            st.markdown(f"<h3 style='text-align: center;'>📅 Balance para Período ID: {periodo_id}</h3>", unsafe_allow_html=True)
             
             # Convert to DataFrame
             df = pd.DataFrame(cuentas)
             
-            # Display balance by account type
+            # Display balance by account type (centered)
             for tipo_cuenta in df['tipo_cuenta'].unique():
-                st.markdown(f"### {tipo_cuenta}")
+                # Título centrado más grande
+                st.markdown(f"<h2 style='text-align: center;'>{tipo_cuenta}</h2>", unsafe_allow_html=True)
                 tipo_df = df[df['tipo_cuenta'] == tipo_cuenta]
                 
-                st.dataframe(
-                    tipo_df[['codigo_cuenta', 'nombre_cuenta', 'total_debe', 'total_haber', 'saldo']],
-                    use_container_width=True
-                )
+                # Preparar columnas para mostrar
+                column_mapping = {
+                    'codigo_cuenta': 'Código',
+                    'nombre_cuenta': 'Nombre Cuenta', 
+                    'total_debe': 'Total Débito',
+                    'total_haber': 'Total Crédito',
+                    'saldo': 'Saldo'
+                }
+                
+                # Seleccionar solo las columnas que existen en los datos
+                available_columns = [col for col in column_mapping.keys() if col in tipo_df.columns]
+                
+                if available_columns:
+                    # Renombrar columnas para mejor visualización
+                    display_df = tipo_df[available_columns].copy()
+                    display_df.columns = [column_mapping[col] for col in available_columns]
+                    
+                    # Tabla centrada y más grande
+                    col_left, col_center, col_right = st.columns([0.5, 4, 0.5])
+                    with col_center:
+                        st.dataframe(
+                            display_df,
+                            use_container_width=True,
+                            height=(len(tipo_df) + 1) * 35 + 3,
+                            hide_index=False
+                        )
             
-            # Display totals
+            # Display totals (centered)
             st.markdown("---")
-            col1, col2 = st.columns(2)
+            col_space1, col1, col2, col_space2 = st.columns([1, 2, 2, 1])
             
             with col1:
-                st.metric("💰 Total Débitos", f"${totales.get('total_debe', 0):,.2f}")
+                total_debe = totales.get('total_debe', 0)
+                st.metric("💰 Total Débitos", f"${total_debe:,.2f}")
             
             with col2:
-                st.metric("💰 Total Créditos", f"${totales.get('total_haber', 0):,.2f}")
+                total_haber = totales.get('total_haber', 0)
+                st.metric("💰 Total Créditos", f"${total_haber:,.2f}")
             
             # Balance validation
-            difference = totales.get('total_debe', 0) - totales.get('total_haber', 0)
+            difference = total_debe - total_haber
             if abs(difference) > 0.01:
                 st.error(f"⚠️ ATENCIÓN: Balance desbalanceado por ${difference:,.2f}")
             else:
