@@ -519,6 +519,51 @@ BEGIN
     END IF;
 END $$;
 
+-- =============================================
+-- CORRECCIÓN AUTOMÁTICA: Normalizar tipos de cuenta para compatibilidad con API
+-- =============================================
+-- Convierte tipos del catálogo contable estándar al formato del schema Pydantic
+-- Mapeo: ACTIVO→Activo, PASIVO→Pasivo, PATRIMONIO→Capital, 
+--        RESULTADO_DEUDORA→Egreso, RESULTADO_ACREEDORA→Ingreso
+DO $$
+DECLARE
+    v_registros_actualizados INTEGER;
+BEGIN
+    UPDATE public.catalogo_cuentas
+    SET tipo_cuenta = CASE
+        -- Conversión desde formato de catálogo contable a formato API
+        WHEN tipo_cuenta = 'ACTIVO' THEN 'Activo'
+        WHEN tipo_cuenta = 'PASIVO' THEN 'Pasivo'
+        WHEN tipo_cuenta = 'PATRIMONIO' THEN 'Capital'
+        WHEN tipo_cuenta = 'RESULTADO_DEUDORA' THEN 'Egreso'
+        WHEN tipo_cuenta = 'RESULTADO_ACREEDORA' THEN 'Ingreso'
+        WHEN tipo_cuenta = 'LIQUIDADORA' THEN 'Egreso'
+        WHEN tipo_cuenta = 'DE_ORDEN' THEN 'Capital'
+        
+        -- Por si acaso ya están en formato correcto (mayúsculas/minúsculas)
+        WHEN UPPER(tipo_cuenta) = 'ACTIVO' THEN 'Activo'
+        WHEN UPPER(tipo_cuenta) = 'PASIVO' THEN 'Pasivo'
+        WHEN UPPER(tipo_cuenta) = 'CAPITAL' THEN 'Capital'
+        WHEN UPPER(tipo_cuenta) = 'INGRESO' THEN 'Ingreso'
+        WHEN UPPER(tipo_cuenta) = 'EGRESO' THEN 'Egreso'
+        
+        ELSE tipo_cuenta
+    END
+    WHERE tipo_cuenta IN (
+        'ACTIVO', 'PASIVO', 'PATRIMONIO', 
+        'RESULTADO_DEUDORA', 'RESULTADO_ACREEDORA', 
+        'LIQUIDADORA', 'DE_ORDEN'
+    );
+    
+    GET DIAGNOSTICS v_registros_actualizados = ROW_COUNT;
+    
+    IF v_registros_actualizados > 0 THEN
+        RAISE NOTICE '✓ Tipos de cuenta normalizados: % registros actualizados para compatibilidad con API', v_registros_actualizados;
+    ELSE
+        RAISE NOTICE '✓ Tipos de cuenta ya están en formato correcto';
+    END IF;
+END $$;
+
 -- Insertar cliente genérico (solo si no existen clientes)
 INSERT INTO public.clientes (nombre, tipo_cliente, activo)
 SELECT 'Cliente Contado', 'INDIVIDUAL', 'SI'

@@ -87,6 +87,8 @@ Get-Content "inicializacion_completa_bd.sql" | docker exec -i contable_db17 psql
 cat inicializacion_completa_bd.sql | docker exec -i contable_db17 psql -U postgres -d contable_db
 ```
 
+> **✅ Nota**: El script incluye corrección automática de tipos de cuenta para compatibilidad con la API. No necesitas ejecutar pasos adicionales.
+
 ### 5️⃣ Acceder al Sistema
 
 | Servicio        | URL                        |
@@ -781,6 +783,75 @@ tests/
 ```
 
 **Nota**: Las pruebas usan SQLite en memoria para no afectar la base de datos PostgreSQL de desarrollo.
+
+---
+
+## ❗ Solución de Problemas Comunes
+
+### Error: "String should match pattern" en Catálogo de Cuentas
+
+**Síntoma**: Al abrir la aplicación ves errores como:
+
+```
+{'type': 'string_pattern_mismatch', 'loc': ('response', 83, 'tipo_cuenta'),
+ 'msg': "String should match pattern '^(Activo|Pasivo|Capital|Ingreso|Egreso)$'",
+ 'input': 'ACTIVO'}
+```
+
+**Causa**: El catálogo de cuentas en la BD tiene tipos en MAYÚSCULAS (ACTIVO, PASIVO, etc.) pero la API espera formato capitalizado (Activo, Pasivo, etc.).
+
+**Solución Automática**: ✅ Desde la última versión, el script `inicializacion_completa_bd.sql` ya incluye la corrección automática. Solo necesitas ejecutarlo normalmente.
+
+**Solución Manual** (si usas una BD antigua sin la corrección):
+
+```powershell
+# Opción 1: Usar el script de corrección independiente
+Get-Content "correccion_tipos_cuenta.sql" | docker exec -i contable_db17 psql -U postgres -d contable_db
+
+# Opción 2: Re-ejecutar el script completo (incluye la corrección)
+Get-Content "inicializacion_completa_bd.sql" | docker exec -i contable_db17 psql -U postgres -d contable_db
+```
+
+La conversión automática transforma:
+
+- `ACTIVO` → `Activo`
+- `PASIVO` → `Pasivo`
+- `PATRIMONIO` → `Capital`
+- `RESULTADO_DEUDORA` → `Egreso`
+- `RESULTADO_ACREEDORA` → `Ingreso`
+- `LIQUIDADORA` → `Egreso`
+- `DE_ORDEN` → `Capital`
+
+### Error: "Column fd.total_linea does not exist"
+
+**Síntoma**: Al ejecutar el script de inicialización ves:
+
+```
+ERROR:  column fd.total_linea does not exist
+```
+
+**Causa**: Las vistas se intentan crear antes de que exista la columna en una BD preexistente.
+
+**Solución**:
+
+```powershell
+# Opción 1: Reiniciar la base de datos completamente
+docker compose down -v
+docker compose up -d
+Get-Content "inicializacion_completa_bd.sql" | docker exec -i contable_db17 psql -U postgres -d contable_db
+
+# Opción 2: Recrear solo las vistas problemáticas
+docker exec -i contable_db17 psql -U postgres -d contable_db -c "DROP VIEW IF EXISTS v_facturas_detalladas CASCADE; DROP VIEW IF EXISTS v_productos_mas_vendidos CASCADE;"
+Get-Content "inicializacion_completa_bd.sql" | docker exec -i contable_db17 psql -U postgres -d contable_db
+```
+
+### No aparecen cuentas en el módulo de Asientos
+
+**Solución**: Ejecutar el script de corrección de tipos (ver arriba) y reiniciar el frontend:
+
+```powershell
+docker compose restart contable_frontend
+```
 
 ---
 
