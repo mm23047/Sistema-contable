@@ -16,7 +16,7 @@ class Transaccion(Base):
     descripcion = Column(Text, nullable=False)
     tipo = Column(String(10), nullable=False)  # INGRESO, EGRESO
     moneda = Column(String(3), nullable=False, default='USD')
-    fecha_creacion = Column(DateTime, nullable=False, default=func.current_timestamp())
+    fecha_creacion = Column(DateTime, nullable=False, default=func.now())
     usuario_creacion = Column(String(50), nullable=False)
     id_periodo = Column(Integer, ForeignKey("periodos_contables.id_periodo"))
     categoria = Column(String, nullable=False)

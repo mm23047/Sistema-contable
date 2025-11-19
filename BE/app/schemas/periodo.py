@@ -2,7 +2,7 @@
 Esquemas Pydantic para Períodos Contables.
 Define la validación de datos y serialización para requests y responses de la API.
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import date
 
@@ -12,9 +12,10 @@ class PeriodoBase(BaseModel):
     tipo_periodo: str = Field(..., pattern="^(MENSUAL|TRIMESTRAL|ANUAL)$", description="Tipo de período")
     estado: str = Field(default="ABIERTO", pattern="^(ABIERTO|CERRADO)$", description="Estado del período")
     
-    @validator('fecha_fin')
-    def validate_fecha_fin(cls, v, values):
-        if 'fecha_inicio' in values and v <= values['fecha_inicio']:
+    @field_validator('fecha_fin')
+    @classmethod
+    def validate_fecha_fin(cls, v, info):
+        if 'fecha_inicio' in info.data and v <= info.data['fecha_inicio']:
             raise ValueError('fecha_fin debe ser posterior a fecha_inicio')
         return v
 
