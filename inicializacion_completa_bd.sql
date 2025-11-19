@@ -194,6 +194,35 @@ CREATE INDEX IF NOT EXISTS idx_detalle_factura ON public.factura_detalle(id_fact
 CREATE INDEX IF NOT EXISTS idx_detalle_producto ON public.factura_detalle(id_producto);
 
 -- =============================================
+-- MIGRACIÓN: Agregar columnas faltantes si no existen
+-- =============================================
+
+-- Agregar columna total_linea a factura_detalle si no existe
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'factura_detalle' 
+        AND column_name = 'total_linea'
+    ) THEN
+        ALTER TABLE public.factura_detalle 
+        ADD COLUMN total_linea NUMERIC(12, 2);
+        
+        -- Calcular valores existentes
+        UPDATE public.factura_detalle 
+        SET total_linea = subtotal + iva 
+        WHERE total_linea IS NULL;
+        
+        -- Hacer NOT NULL después de calcular valores
+        ALTER TABLE public.factura_detalle 
+        ALTER COLUMN total_linea SET NOT NULL;
+        
+        RAISE NOTICE 'Columna total_linea agregada a factura_detalle';
+    END IF;
+END $$;
+
+-- =============================================
 -- PASO 5: INSERTAR DATOS INICIALES (solo si las tablas están vacías)
 -- =============================================
 
