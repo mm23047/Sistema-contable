@@ -4,7 +4,17 @@ Configura la API, middleware y rutas.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from BE.app.routes import catalogo_cuentas, transacciones, asientos, reportes, periodos, factura_routes,libro_mayor
+from BE.app.routes import (
+    catalogo_cuentas, 
+    transacciones, 
+    asientos, 
+    reportes, 
+    periodos, 
+    factura_routes, 
+    libro_mayor,
+    cliente_routes,
+    producto_routes
+)
 from BE.app.db import create_tables
 import os
 
@@ -33,6 +43,8 @@ app.include_router(reportes.router)
 app.include_router(periodos.router)
 app.include_router(factura_routes.router)
 app.include_router(libro_mayor.router)
+app.include_router(cliente_routes.router)
+app.include_router(producto_routes.router)
 
 @app.on_event("startup")
 def startup_event():
@@ -53,7 +65,9 @@ def read_root():
             "reportes": "/api/reportes",
             "periodos": "/api/periodos",
             "facturas": "/api/facturas",
-            "libro_mayor": "/api/libro_mayor"
+            "libro_mayor": "/api/libro_mayor",
+            "clientes": "/api/clientes",
+            "productos": "/api/productos"
         }
     }
 

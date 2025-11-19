@@ -4,7 +4,7 @@ Proporciona una interfaz web para gestionar transacciones, asientos contables y 
 """
 import streamlit as st
 import os
-from modules import transacciones, asientos, reportes, facturas, libro_mayor
+from modules import transacciones, asientos, reportes, facturas, libro_mayor, clientes, productos
 
 # Configurar ajustes de página
 st.set_page_config(
@@ -25,7 +25,7 @@ st.markdown("---")
 st.sidebar.title("Navegación")
 page = st.sidebar.selectbox(
     "Selecciona una página:",
-    ["Transacciones", "Asientos", "Reportes", "Facturas", "Libro Mayor"]
+    ["Transacciones", "Asientos", "Reportes", "Facturas", "Clientes", "Productos", "Libro Mayor"]
 )
 
 # Inicializar estado de sesión
@@ -41,6 +41,10 @@ elif page == "Reportes":
     reportes.render_page(BACKEND_URL)
 elif page == "Facturas":
     facturas.render_page(BACKEND_URL)
+elif page == "Clientes":
+    clientes.render_page(BACKEND_URL)
+elif page == "Productos":
+    productos.render_page(BACKEND_URL)
 elif page == "Libro Mayor":
     libro_mayor.render_page(BACKEND_URL)
 
