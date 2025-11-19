@@ -9,3 +9,5 @@ pandas
 jinja2
 openpyxl
 reportlab==4.0.8
+pytest
+httpx

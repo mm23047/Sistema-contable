@@ -1,348 +1,742 @@
-# 💰 Sistema Contable
+﻿# 💰 Sistema Contable Completo
 
-Un sistema de contabilidad completo desarrollado con FastAPI (backend), Streamlit (frontend), y PostgreSQL (base de datos).
+Sistema de contabilidad integral con módulos de facturación, gestión de clientes, inventario y reportes contables, desarrollado con arquitectura moderna y desplegado con Docker.
 
-## 🚀 Características
+---
 
-- **Backend**: FastAPI con SQLAlchemy y PostgreSQL
-- **Frontend**: Streamlit con interfaz web intuitiva
-- **Base de datos**: PostgreSQL 17.5 con pgAdmin
-- **Flujo contable completo**: Transacciones → Asientos → Reportes
-- **Exportación**: Libro Diario en Excel y HTML
-- **Dockerizado**: Despliegue completo con Docker Compose
-- **Catálogo completo**: 288 cuentas contables preconfiguradas
+## 📑 Índice
 
-## 🛠️ Instalación y Configuración
+1. [Descripción General](#-descripción-general)
+2. [Inicio Rápido](#-inicio-rápido)
+3. [Interfaz de Usuario (Frontend)](#-interfaz-de-usuario-frontend)
+4. [Características Principales](#-características-principales)
+5. [Arquitectura y Tecnologías](#-arquitectura-y-tecnologías)
+6. [API Endpoints](#-api-endpoints)
+7. [Cambios Recientes](#-cambios-recientes-y-migraciones)
+8. [Troubleshooting](#-troubleshooting)
+9. [Pruebas Unitarias](#-pruebas-unitarias)
+
+---
+
+## 🎯 Descripción General
+
+Sistema de contabilidad profesional que integra:
+
+- ✅ **Contabilidad completa**: Transacciones, asientos contables, libro diario y mayor
+- ✅ **Facturación normalizada**: Clientes, productos/servicios, facturas con detalles
+- ✅ **Reportes profesionales**: PDFs fiscales, Excel, JSON, HTML
+- ✅ **Catálogo de cuentas**: 294 cuentas preconfiguradas
+- ✅ **Períodos contables**: Gestión mensual, trimestral y anual
+- ✅ **Multi-formato**: Exportación en PDF, Excel, HTML y JSON
+
+---
+
+## 🚀 Inicio Rápido
 
 ### Prerrequisitos
 
-- Docker Desktop
-- Git
+- **Docker Desktop** (con Docker Compose)
+- **Git**
+- Windows 10/11, macOS o Linux
 
-### 1. Clonar el repositorio
-
-```bash
-git clone <url-de-tu-repositorio>
-cd proyecto-contable
-```
-
-### 2. Configurar variables de entorno
+### 1️⃣ Clonar el Repositorio
 
 ```bash
-# Copiar el archivo de ejemplo
-cp .env.example .env
-
-# Editar .env con tus credenciales
-# POSTGRES_PASSWORD=tu_password_seguro
-# PGADMIN_EMAIL=tu_email@ejemplo.com
-# PGADMIN_PASSWORD=tu_password_admin
+git clone https://github.com/mm23047/Sistema-contable.git
+cd Sistema-contable
 ```
 
-### 3. Levantar los servicios
+### 2️⃣ Configurar Variables de Entorno
+
+Edita el archivo `.env`:
+
+```env
+# Puertos
+PORT_BE=8000
+PORT_FE=8501
+
+# PostgreSQL
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=tu_password_seguro
+POSTGRES_DB=contable_db
+POSTGRES_HOST=contable_db17
+POSTGRES_PORT=5432
+
+# PgAdmin
+PGADMIN_EMAIL=tu_email@ejemplo.com
+PGADMIN_PASSWORD=tu_password_admin
+PGADMIN_PORT=5050
+```
+
+### 3️⃣ Levantar los Contenedores
 
 ```bash
-# Construir y ejecutar todos los contenedores
-docker-compose up --build
-
-# O en segundo plano
-docker-compose up -d --build
+docker compose up --build -d
+docker compose ps  # Verificar servicios
 ```
 
-### 4. Inicializar la base de datos
+### 4️⃣ Inicializar la Base de Datos
+
+```powershell
+# Windows PowerShell
+Get-Content "inicializacion_completa_bd.sql" | docker exec -i contable_db17 psql -U postgres -d contable_db
+```
 
 ```bash
-# Opción 1: Script básico (primeras cuentas)
-Get-Content "init_database.sql" | docker exec -i contable_db17 psql -U postgres -d contable_db
-
-# Opción 2: Para cargar el catálogo completo (288 cuentas)
-# Usar el archivo insert_catalogo.sql proporcionado por el usuario
+# Linux/macOS
+cat inicializacion_completa_bd.sql | docker exec -i contable_db17 psql -U postgres -d contable_db
 ```
 
-## 🌐 Acceso al Sistema
+### 5️⃣ Acceder al Sistema
 
-Una vez que todos los servicios estén ejecutándose:
+| Servicio        | URL                        |
+| --------------- | -------------------------- |
+| **Frontend**    | http://localhost:8501      |
+| **Backend API** | http://localhost:8000      |
+| **Docs API**    | http://localhost:8000/docs |
+| **pgAdmin**     | http://localhost:5050      |
 
-- **Frontend**: http://localhost:8501
-- **Backend API**: http://localhost:8000
-- **Documentación API**: http://localhost:8000/docs
-- **pgAdmin**: http://localhost:5050
+---
 
-## 📊 Uso del Sistema
+## 🖥️ Interfaz de Usuario (Frontend)
 
-### 1. Gestión de Transacciones
+El frontend está desarrollado con **Streamlit** y proporciona una interfaz intuitiva para gestionar todas las operaciones contables.
 
-- Crear transacciones de INGRESO o EGRESO
-- Asociar a períodos contables
-- Validación automática de datos
+### 📌 Flujo de Trabajo Recomendado
 
-### 2. Asientos Contables
+```
+1. CLIENTES → Registrar clientes antes de facturar
+2. PRODUCTOS → Crear catálogo de productos/servicios
+3. TRANSACCIONES → Registrar movimientos contables (Ingresos/Egresos)
+4. ASIENTOS → Crear asientos contables asociados a transacciones
+5. FACTURAS → Generar facturas desde transacciones o crear nuevas
+6. REPORTES → Visualizar y exportar reportes contables
+7. LIBRO MAYOR → Consultar balances y movimientos por cuenta
+```
 
-- Crear asientos debe/haber
-- Validación de partida doble
-- Asociar a cuentas del catálogo
+### 📄 Descripción de Páginas
 
-### 3. Reportes
+#### 1. 🏢 **Clientes**
 
-- Libro Diario completo
-- Exportación a Excel/HTML
-- Filtros por período
+**Propósito**: Gestión completa del catálogo de clientes
 
-## 🏗️ Arquitectura
+**Funcionalidades**:
+
+- **Tab "Ver Clientes"**: Lista todos los clientes con estadísticas (total de compras, facturas)
+- **Tab "Agregar Cliente"**: Formulario para registrar nuevos clientes
+  - Datos: Nombre, NIT, dirección, teléfono, email
+  - Tipo: Individual o Empresa
+  - Estado: Activo/Inactivo
+- **Tab "Editar Cliente"**: Modificar datos de clientes existentes
+- **Estadísticas**: Resumen de clientes activos, total registrado
+
+**Flujo**:
+
+1. Navegar a "Clientes"
+2. Crear cliente nuevo en tab "Agregar Cliente"
+3. Verificar en tab "Ver Clientes" que se agregó correctamente
+4. Usar cliente al crear facturas
+
+---
+
+#### 2. 📦 **Productos**
+
+**Propósito**: Administración del inventario de productos y servicios
+
+**Funcionalidades**:
+
+- **Tab "Ver Productos"**: Catálogo completo con filtros
+  - Filtrar por tipo (Producto/Servicio)
+  - Filtrar por estado (Activo/Inactivo)
+  - Ver stock actual y alertas de stock mínimo
+- **Tab "Agregar Producto"**: Crear nuevos ítems
+  - Código SKU único
+  - Nombre y descripción
+  - Categoría personalizable
+  - Precios: Unitario y costo
+  - Control de stock (actual y mínimo)
+  - Indicador de IVA
+- **Tab "Editar Producto"**: Actualizar información
+- **Tab "Estadísticas"**: Métricas de inventario
+  - Total de productos activos
+  - Valor total del inventario
+  - Productos más vendidos
+  - Alertas de stock bajo
+
+**Flujo**:
+
+1. Registrar productos en tab "Agregar Producto"
+2. Configurar precios y stock
+3. Usar productos al crear facturas con detalles
+
+---
+
+#### 3. 💵 **Transacciones**
+
+**Propósito**: Registro de movimientos contables (origen de la contabilidad)
+
+**Funcionalidades**:
+
+- **Crear Transacción**: Formulario con validación
+  - Fecha de transacción
+  - Descripción detallada
+  - Tipo: INGRESO o EGRESO
+  - Categoría (Ventas, Compras, Servicios, etc.)
+  - Usuario que registra
+  - Período contable asociado
+- **Listar Transacciones**: Tabla con todas las transacciones
+  - Filtros por fecha, tipo, categoría
+  - Acciones: Editar, Eliminar
+- **Selección Automática**: Al crear una transacción, queda seleccionada para crear asientos
+
+**Flujo**:
+
+1. Seleccionar tipo (INGRESO/EGRESO)
+2. Llenar descripción y datos
+3. Guardar → La transacción queda "activa" en sesión
+4. Ir a "Asientos" para registrar movimientos contables
+
+**⚠️ Regla Importante**: Debes crear primero una transacción antes de poder crear asientos.
+
+---
+
+#### 4. 📊 **Asientos**
+
+**Propósito**: Registro de movimientos de partida doble
+
+**Funcionalidades**:
+
+- **Crear Asiento**: Solo si hay transacción seleccionada
+  - Seleccionar cuenta del catálogo (294 cuentas disponibles)
+  - Especificar Debe o Haber
+  - Monto del movimiento
+  - Validación: Solo uno de Debe/Haber puede ser > 0
+- **Ver Asientos de Transacción**: Lista de asientos asociados
+  - Filtrar por transacción
+  - Ver totales de Debe y Haber
+  - Validación de balance (Debe = Haber)
+- **Editar/Eliminar**: Modificar asientos existentes
+
+**Flujo**:
+
+1. Tener transacción creada (desde página "Transacciones")
+2. Seleccionar cuenta contable
+3. Ingresar monto en Debe o Haber
+4. Repetir hasta balancear (Debe = Haber)
+5. Verificar balance antes de cerrar
+
+**⚠️ Validación**: El sistema verifica que exactamente uno de Debe/Haber sea mayor a cero.
+
+---
+
+#### 5. 🧾 **Facturas**
+
+**Propósito**: Generación y gestión de facturas fiscales
+
+**Funcionalidades**:
+
+- **Tab "Listado de Facturas"**: Visualización completa
+  - Expandir cada factura para ver detalles completos
+  - Información del cliente (normalizada)
+  - Detalles financieros (Subtotal, IVA, Descuento, Total)
+  - **Botones de descarga**:
+    - 📄 PDF: Factura fiscal profesional
+    - 📊 Excel: Hoja de cálculo con formato
+    - 📋 JSON: Datos estructurados con detalles
+  - Filtros: Por cliente, NIT, fecha
+- **Tab "Estadísticas"**: Análisis de facturación
+  - Total facturado en período
+  - IVA recaudado
+  - Descuentos otorgados
+  - Promedio de venta
+  - Top clientes por volumen
+- **Tab "Crear Factura"**: Formulario normalizado
+  - **Sección 1: Seleccionar Cliente**
+    - Dropdown con clientes registrados
+    - Opción de crear cliente nuevo (abre modal)
+  - **Sección 2: Agregar Productos** (fuera del form para interactividad)
+    - Seleccionar producto del catálogo
+    - Cantidad (actualiza en tiempo real)
+    - Descuento opcional
+    - Botón "➕ Agregar a Factura"
+    - Botón "🗑️ Limpiar Todos los Productos"
+  - **Sección 3: Tabla de Productos Agregados**
+    - Ver líneas de la factura
+    - Subtotales por producto
+    - Total acumulado con IVA
+  - **Sección 4: Información Adicional** (dentro del form)
+    - Condiciones de pago (Contado/Crédito)
+    - Vendedor
+    - Fecha de vencimiento
+    - Notas
+    - Botón "✅ Crear Factura Completa"
+
+**Flujo de Creación**:
+
+1. Navegar a tab "Crear Factura"
+2. Seleccionar cliente existente
+3. Agregar productos uno por uno:
+   - Seleccionar producto → se muestra precio
+   - Ajustar cantidad → se actualiza total
+   - Clic en "➕ Agregar a Factura"
+4. Revisar tabla de productos agregados
+5. Llenar información adicional (vendedor, condiciones de pago)
+6. Clic en "✅ Crear Factura Completa"
+7. Verificar en tab "Listado" que se creó correctamente
+
+**Características Especiales**:
+
+- Numeración automática: `FACT-2025-0001`
+- Cálculo automático de IVA (13%)
+- Validación de datos del cliente
+- Integración con transacciones contables
+- Productos seleccionables actualizan en tiempo real (fuera del form)
+
+**Descargas Disponibles**:
+
+- **PDF**: Incluye logo de empresa (placeholder), detalles de cliente, tabla de productos, totales y notas
+- **Excel**: Formato profesional con hojas separadas para datos y detalles
+- **JSON**: Estructura completa con metadata, detalles de productos y totales
+
+---
+
+#### 6. 📈 **Reportes**
+
+**Propósito**: Visualización y exportación de reportes contables
+
+**Funcionalidades**:
+
+- **Libro Diario**: Registro cronológico de todas las operaciones
+  - Filtros por fecha
+  - Filtros por tipo de transacción
+  - Ver asientos agrupados por transacción
+  - Columnas: Fecha, Descripción, Cuenta, Debe, Haber
+  - Totales calculados automáticamente
+- **Exportaciones**:
+  - 📊 Excel: Libro Diario formateado
+  - 🌐 HTML: Reporte visual para navegador
+- **Balances**: Resumen por período contable
+  - Balance de comprobación
+  - Estado de resultados
+  - Balance general
+
+**Flujo**:
+
+1. Seleccionar rango de fechas
+2. Aplicar filtros opcionales
+3. Visualizar reporte en pantalla
+4. Exportar en formato deseado
+
+---
+
+#### 7. 📚 **Libro Mayor**
+
+**Propósito**: Consulta de movimientos por cuenta contable
+
+**Funcionalidades**:
+
+- **Seleccionar Cuenta**: Dropdown con catálogo de 294 cuentas
+  - Agrupadas por tipo (Activo, Pasivo, Capital, Ingreso, Egreso)
+  - Código y nombre de cuenta
+- **Ver Movimientos**: Tabla de transacciones
+  - Fecha y descripción
+  - Debe y Haber
+  - Saldo acumulado
+- **Filtros**:
+  - Por período contable
+  - Por rango de fechas
+- **Totales**:
+  - Total Debe
+  - Total Haber
+  - Saldo Final
+
+**Flujo**:
+
+1. Seleccionar cuenta a consultar
+2. Aplicar filtros de período
+3. Revisar movimientos y saldo
+4. Exportar si es necesario
+
+---
+
+### 🔄 Estado de Sesión
+
+El frontend utiliza `st.session_state` para mantener:
+
+- **transaccion_actual**: Transacción seleccionada para crear asientos
+- **productos_factura**: Lista temporal de productos al crear factura
+- **filtros activos**: Preserva filtros entre navegaciones
+
+### 🎨 Características de UX
+
+- **Diseño responsivo**: Layout ancho (`wide`)
+- **Sidebar expandido**: Navegación siempre visible
+- **Feedback visual**:
+  - ✅ Mensajes de éxito en verde
+  - ❌ Mensajes de error en rojo
+  - ⚠️ Advertencias en amarillo
+  - 💡 Información en azul
+- **Validación en tiempo real**: Campos con validación inmediata
+- **Confirmaciones**: Diálogos para acciones destructivas
+- **Loading states**: Indicadores de carga en operaciones largas
+
+---
+
+## 📋 API Endpoints
+
+### Endpoints Principales
+
+**Facturas**:
+
+- `GET /api/facturas/` - Listado con filtros (cliente, NIT, fechas)
+- `POST /api/facturas/` - Crear factura nueva
+- `GET /api/facturas/{id}` - Obtener factura específica
+- `GET /api/facturas/{id}/descargar-pdf` - Descarga PDF
+- `GET /api/facturas/{id}/descargar-excel` - Descarga Excel
+- `GET /api/facturas/{id}/descargar-json` - Descarga JSON con detalles completos
+- `GET /api/facturas/estadisticas/resumen` - Estadísticas de facturación
+- `GET /api/facturas/estadisticas/top-clientes` - Top clientes
+
+**Clientes**:
+
+- `GET /api/clientes/` - Listar todos
+- `POST /api/clientes/` - Crear cliente
+- `PUT /api/clientes/{id}` - Actualizar
+- `DELETE /api/clientes/{id}` - Eliminar
+
+**Productos**:
+
+- `GET /api/productos/` - Catálogo completo
+- `POST /api/productos/` - Crear producto
+- `PUT /api/productos/{id}` - Actualizar
+- `GET /api/productos/estadisticas/resumen` - Métricas de inventario
+
+**Transacciones y Asientos**:
+
+- `POST /api/transacciones/` - Crear transacción
+- `POST /api/asientos/` - Crear asiento contable
+- `GET /api/reportes/libro-diario` - Libro diario
+
+**Documentación interactiva**: http://localhost:8000/docs
+
+---
+
+## 📚 Características Principales
+
+### 🧾 Facturación Normalizada
+
+- Numeración automática: `FACT-2025-0001`
+- Múltiples productos por factura con detalles
+- Cálculo automático de IVA (13%)
+- Descuentos por línea y globales
+- Cliente normalizado con datos completos
+- Exportación profesional (PDF, Excel, JSON)
+- Estadísticas y top clientes
+
+### 💼 Gestión de Clientes
+
+- CRUD completo
+- Tipos: Individual / Empresa
+- Estado: Activo / Inactivo
+- Historial de compras
+- Estadísticas integradas
+
+### 📦 Catálogo de Productos/Servicios
+
+- Código SKU único
+- Control de inventario (stock actual/mínimo)
+- Categorías personalizables
+- Indicador de IVA
+- Tipos: Producto / Servicio
+- Alertas de stock bajo
+
+### 📊 Contabilidad Completa
+
+- Transacciones (Ingreso/Egreso)
+- Asientos contables (partida doble)
+- Validación: Debe = Haber
+- Catálogo de 294 cuentas
+- Períodos contables
+- Libro Diario y Mayor
+
+### 📈 Reportes Multi-formato
+
+- Exportación PDF, Excel, HTML, JSON
+- Filtros por período y tipo
+- Estadísticas en tiempo real
+- Balances automáticos
+
+---
+
+## 🏗️ Arquitectura y Tecnologías
+
+### Stack Tecnológico
+
+**Backend**:
+
+- FastAPI (framework web asíncrono)
+- SQLAlchemy (ORM)
+- Pydantic v2 (validación con `field_validator`, `from_attributes`)
+- PostgreSQL 17.5
+- ReportLab (generación de PDFs)
+- openpyxl (archivos Excel)
+- Uvicorn (servidor ASGI)
+
+**Frontend**:
+
+- Streamlit (interfaz interactiva)
+- Pandas (procesamiento de datos)
+- Requests (cliente HTTP)
+
+**Infraestructura**:
+
+- Docker y Docker Compose
+- pgAdmin 4 (administración BD)
+
+### Estructura del Proyecto
 
 ```
 proyecto-contable/
-├── BE/                     # Backend FastAPI
+├── BE/                        # Backend FastAPI
 │   ├── app/
-│   │   ├── main.py        # Aplicación principal
-│   │   ├── db.py          # Configuración de base de datos
-│   │   ├── models/        # Modelos SQLAlchemy
-│   │   ├── schemas/       # Esquemas Pydantic
-│   │   ├── routes/        # Endpoints API
-│   │   └── services/      # Lógica de negocio
-│   ├── requirements.txt
-│   └── Dockerfile
-├── FE/                     # Frontend Streamlit
-│   ├── app.py             # Aplicación principal
-│   ├── pages/             # Páginas de la interfaz
-│   ├── requirements.txt
-│   └── Dockerfile
-├── docker-compose.yml      # Orquestación de servicios
-├── .env.example           # Variables de entorno
-└── README.md
+│   │   ├── main.py           # App principal
+│   │   ├── db.py             # Configuración BD
+│   │   ├── models/           # Modelos SQLAlchemy
+│   │   │   ├── cliente.py
+│   │   │   ├── producto_servicio.py
+│   │   │   ├── factura_models.py
+│   │   │   ├── factura_detalle.py
+│   │   │   ├── transaccion.py
+│   │   │   ├── asiento.py
+│   │   │   ├── catalogo_cuentas.py
+│   │   │   └── periodo.py
+│   │   ├── schemas/          # Esquemas Pydantic v2
+│   │   ├── routes/           # Endpoints API
+│   │   └── services/         # Lógica de negocio
+│   └── requirements.txt
+│
+├── FE/                        # Frontend Streamlit
+│   ├── app.py                # App principal
+│   ├── modules/              # Páginas del sistema
+│   │   ├── transacciones.py
+│   │   ├── asientos.py
+│   │   ├── facturas.py       #
+│   │   ├── clientes.py       #
+│   │   ├── productos.py      #
+│   │   ├── reportes.py
+│   │   └── libro_mayor.py
+│   └── requirements.txt
+│
+├── docker-compose.yml
+├── .env
+├── inicializacion_completa_bd.sql
+
 ```
 
-## 🛠️ Instalación y Despliegue
+---
 
-### 1. Clonar el Repositorio
+## 🔄 Cambios Recientes y Migraciones
 
-```bash
-git clone <repository-url>
-cd proyecto-contable
-```
+### Normalización de Base de Datos (v2.0)
 
-### 2. Configurar Variables de Entorno
+**Tablas Nuevas**:
 
-```bash
-cp .env.example .env
-# Editar .env con tus configuraciones
-```
+- `clientes` - Catálogo de clientes reutilizable
+- `productos_servicios` - Inventario completo
+- `factura_detalle` - Líneas de productos por factura
 
-### 3. Levantar los Servicios
+**Cambios en Facturas**:
 
-```bash
-docker-compose up --build
-```
+- Relación normalizada con `clientes` (`id_cliente`)
+- Detalles de productos en tabla separada
+- Campos legacy mantenidos para compatibilidad
+- Endpoint JSON agregado para descarga completa
 
-## 🌐 URLs de Acceso
+**Migración a Pydantic v2**:
 
-Una vez iniciados los servicios:
+- `@validator` → `@field_validator` + `@classmethod`
+- `values` → `info.data`
+- `orm_mode` → `from_attributes`
 
-- **Frontend (Streamlit)**: http://localhost:8501
-- **Backend API (FastAPI)**: http://localhost:8000
-- **Documentación API**: http://localhost:8000/docs
-- **pgAdmin**: http://localhost:5050
+**Correcciones SQLAlchemy**:
 
-## 📊 Flujo de Uso
+- `func.now()` → `func.current_timestamp()` en `server_default`
+- Relaciones bidireccionales corregidas (`back_populates`)
 
-### Flujo Obligatorio
+**Scripts de Migración**:
 
-1. **Crear Transacción** → Registra una nueva transacción contable
-2. **Crear Asientos** → Solo después de tener una transacción, crea los asientos asociados
-3. **Editar/Eliminar** → Modifica transacciones y asientos según sea necesario
-4. **Generar Reportes** → Visualiza y exporta el Libro Diario
+- `inicializacion_completa_bd.sql`: Setup completo desde cero
 
-### Pasos Detallados
+---
 
-#### 1. Gestión de Transacciones
+## 🔧 Troubleshooting
 
-- Navega a la página "Transacciones"
-- Llena el formulario con fecha, descripción, tipo (INGRESO/EGRESO), usuario, etc.
-- Al crear exitosamente, la transacción queda seleccionada para asientos
+### Problemas Comunes
 
-#### 2. Gestión de Asientos
+**1. Cambios en frontend no aparecen**
 
-- Navega a la página "Asientos" (solo disponible con transacción seleccionada)
-- Selecciona una cuenta del catálogo
-- Especifica si es Débito o Crédito y el monto
-- El sistema valida que exactamente uno de debe/haber sea > 0
+- Reconstruir sin caché: `docker compose build --no-cache frontend`
+- Reiniciar contenedores: `docker compose restart frontend`
 
-#### 3. Reportes y Exportación
+**2. Errores de Pydantic v2 / Pylint**
 
-- Navega a la página "Reportes"
-- Visualiza el Libro Diario con todos los asientos
-- Exporta en formato Excel o HTML
-- Revisa balances por período
+- Pylint puede marcar falsos positivos con `@field_validator` + `@classmethod`
+- Si el código funciona, agregar: `# pylint: disable=no-self-argument`
+- Recargar ventana de VS Code si persiste
 
-## 🔧 API Examples
+**3. Errores al generar PDF/Excel**
 
-### Crear Transacción
+- Verificar instalación: `reportlab` y `openpyxl` en `BE/requirements.txt`
+- Reconstruir contenedor backend con `--no-cache`
 
-```bash
-curl -X POST "http://localhost:8000/api/transacciones/" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "fecha_transaccion": "2025-08-01T10:00:00",
-       "descripcion": "Venta de camisetas",
-       "tipo": "INGRESO",
-       "moneda": "USD",
-       "usuario_creacion": "estudiante1",
-       "id_periodo": 1
-     }'
-```
+**4. Error de conexión a base de datos**
 
-**Respuesta 201:**
+- Verificar que el contenedor `contable_db17` esté corriendo
+- Revisar variables de entorno en `.env`
+- Comprobar logs: `docker compose logs db`
 
-```json
-{
-  "id_transaccion": 12
-}
-```
+**5. Numeración de facturas incorrecta**
 
-### Crear Asiento
+- Verificar secuencia en BD: `SELECT nextval('factura_numero_seq')`
+- Reiniciar secuencia si es necesario
 
-```bash
-curl -X POST "http://localhost:8000/api/asientos/" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "id_transaccion": 12,
-       "id_cuenta": 3,
-       "debe": 50.00,
-       "haber": 0.00
-     }'
-```
+**6. Productos no se agregan a factura**
 
-**Respuesta 201:**
+- Recordar que selectores de productos están **fuera del formulario** para actualización en tiempo real
+- Hacer clic en "➕ Agregar a Factura" después de seleccionar
 
-```json
-{
-  "id_asiento": 45
-}
-```
+---
 
-## 📋 Validaciones y Reglas de Negocio
+## 🛠️ Desarrollo Local
 
-### Transacciones
+### Ejecutar sin Docker
 
-- Fecha debe ser formato ISO válido
-- Tipo debe ser 'INGRESO' o 'EGRESO'
-- Descripción y usuario son obligatorios
-
-### Asientos
-
-- Debe existir la transacción asociada (FK validation)
-- Debe existir la cuenta asociada (FK validation)
-- **Regla crítica**: Exactamente uno de `debe` o `haber` debe ser > 0
-- No se permite crear asientos sin transacción
-
-### Eliminación
-
-- **TODO**: Definir política de cascada al eliminar transacciones
-- Actualmente implementa eliminación en cascada
-- Considerar marcar como inactivo en lugar de eliminar
-
-## 🧪 Desarrollo
-
-### Ejecutar Backend Localmente
+**Backend**:
 
 ```bash
 cd BE
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+.\.venv\Scripts\activate   # Windows
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --reload --port 8000
 ```
 
-### Ejecutar Frontend Localmente
+**Frontend**:
 
 ```bash
 cd FE
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+.\.venv\Scripts\activate   # Windows
 pip install -r requirements.txt
 streamlit run app.py --server.port 8501
 ```
 
-### Ejecutar Pruebas
+### Comandos Útiles
+
+**Logs de contenedores**:
 
 ```bash
-# TODO: Implementar framework de pruebas
-python -m pytest tests/
+docker compose logs -f frontend  # Seguir logs del frontend
+docker compose logs -f backend   # Seguir logs del backend
+docker compose logs -f db        # Seguir logs de PostgreSQL
 ```
 
-## 🐛 Tareas Pendientes (TODO)
-
-### Backend
-
-- [ ] Implementar Alembic para migraciones en producción
-- [ ] Configurar gunicorn/uvicorn workers para producción
-- [ ] Implementar paginación para endpoints con muchos registros
-- [ ] Añadir autenticación y autorización
-- [ ] Mejorar manejo de errores con logs estructurados
-- [ ] Implementar políticas de eliminación en cascada configurables
-
-### Frontend
-
-- [ ] Cargar períodos dinámicamente desde la API
-- [ ] Implementar validaciones client-side más robustas
-- [ ] Añadir gráficos y dashboards
-- [ ] Implementar filtros avanzados en reportes
-- [ ] Mejorar UX con loading states y confirmaciones
-
-### General
-
-- [ ] Configurar CI/CD pipeline
-- [ ] Implementar backup automatizado de la base de datos
-- [ ] Documentar API con ejemplos más detallados
-- [ ] Añadir métricas y monitoreo
-- [ ] Configurar CORS específicos para producción
-
-## 📚 Tecnologías Utilizadas
-
-- **Backend**: FastAPI, SQLAlchemy, psycopg2-binary, Pydantic
-- **Frontend**: Streamlit, Requests, Pandas
-- **Base de datos**: PostgreSQL 17.5
-- **Administración DB**: pgAdmin 4
-- **Containerización**: Docker, Docker Compose
-- **Exportación**: openpyxl (Excel), Jinja2 (HTML)
-
-## 🔒 Configuración de Producción
-
-### Variables de Entorno Importantes
+**Reiniciar servicios**:
 
 ```bash
-# En producción, usar valores seguros:
-POSTGRES_PASSWORD=<contraseña-fuerte>
-PGADMIN_PASSWORD=<contraseña-fuerte>
-
-# Configurar CORS específicos
-ALLOWED_ORIGINS=https://tu-dominio.com
-
-# Configurar SSL para bases de datos
-DATABASE_SSL=require
+docker compose restart frontend
+docker compose restart backend
+docker compose restart  # Todos los servicios
 ```
 
-### Consideraciones de Seguridad
+**Acceder a la base de datos**:
 
-- Cambiar todas las contraseñas por defecto
-- Configurar HTTPS/SSL para todos los servicios
-- Implementar rate limiting en la API
-- Configurar firewalls y acceso restringido a puertos
-- Usar secretos de Docker/Kubernetes en lugar de .env
-
-## 🤝 Contribución
-
-1. Fork el proyecto
-2. Crea una rama feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -am 'Añadir nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
-
-### Gitflow
-
-- `main`: Código de producción estable
-- `develop`: Rama de desarrollo principal
-- `feature/*`: Nuevas funcionalidades
-- `release/*`: Preparación de releases
-- `hotfix/*`: Correcciones urgentes
-
-## 📞 Soporte
-
-Para reportar bugs o solicitar funcionalidades, por favor abre un issue en el repositorio.
+```bash
+docker exec -it contable_db17 psql -U postgres -d contable_db
+```
 
 ---
+
+## 🧪 Pruebas Unitarias
+
+El proyecto incluye pruebas unitarias para backend y frontend ubicadas en `tests/`.
+
+### Estructura de Tests
+
+```
+tests/
+├── be/                 # Tests del Backend (FastAPI)
+│   ├── test_transacciones.py
+│   ├── test_asientos.py
+│   ├── test_clientes.py
+│   ├── test_productos.py
+│   └── test_facturas.py
+└── fe/                 # Tests del Frontend (lógica de negocio)
+    ├── test_clientes.py
+    ├── test_productos.py
+    └── test_facturas.py
+```
+
+### Ejecutar Pruebas
+
+**Opción 1: Dentro del contenedor Docker (Recomendado)**
+
+```bash
+# Ejecutar todas las pruebas del backend
+docker exec -it proyecto-contable-backend-1 pytest tests/be/ -v
+
+# Ejecutar pruebas específicas
+docker exec -it proyecto-contable-backend-1 pytest tests/be/test_transacciones.py -v
+docker exec -it proyecto-contable-backend-1 pytest tests/be/test_asientos.py -v
+docker exec -it proyecto-contable-backend-1 pytest tests/be/test_clientes.py -v
+
+# Ejecutar con reporte de cobertura
+docker exec -it proyecto-contable-backend-1 pytest tests/be/ --cov=app --cov-report=html
+```
+
+**Opción 2: Localmente (con entorno virtual)**
+
+```bash
+# Activar entorno virtual
+cd BE
+python -m venv .venv
+.\.venv\Scripts\activate  # Windows
+source .venv/bin/activate  # Linux/macOS
+
+# Instalar dependencias (incluye pytest y httpx)
+pip install -r requirements.txt
+
+# Ejecutar pruebas del backend
+pytest tests/be/ -v
+
+# Ejecutar pruebas del frontend
+pytest tests/fe/ -v
+
+# Ejecutar todas las pruebas
+pytest tests/ -v
+
+# Con cobertura
+pytest tests/ --cov=app --cov-report=term-missing
+```
+
+### Estructura de Tests
+
+```
+tests/
+├── be/                      # Tests del backend
+│   ├── test_transacciones.py
+│   └── test_asientos.py
+└── fe/                      # Tests del frontend (por implementar)
+```
+
+**Nota**: Las pruebas usan SQLite en memoria para no afectar la base de datos PostgreSQL de desarrollo.
+
+---
+
+**Última actualización**: Noviembre 2025 | **Versión**: 2.0 (Normalización)
+
+---
+
+Para más información, consulta la documentación interactiva de la API en http://localhost:8000/docs después de levantar los servicios.
