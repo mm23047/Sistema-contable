@@ -2,26 +2,13 @@
 Pruebas unitarias para el módulo de Productos (API).
 Prueba endpoints CRUD de productos, cálculos de precios e inventario.
 """
+import os
+os.environ["TESTING"] = "true"  # Debe estar ANTES de importar app
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from BE.app.main import app
-from BE.app.db import get_db, Base
-
-# Configuración de base de datos de pruebas
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-app.dependency_overrides[get_db] = override_get_db
+from BE.app.db import Base, engine
 
 @pytest.fixture
 def test_client():

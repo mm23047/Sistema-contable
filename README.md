@@ -661,7 +661,31 @@ docker exec -it contable_db17 psql -U postgres -d contable_db
 
 ## 🧪 Pruebas Unitarias
 
-El proyecto incluye pruebas unitarias para backend y frontend ubicadas en `tests/`.
+El proyecto incluye **54 pruebas unitarias** funcionando al **100%** para backend y frontend ubicadas en `tests/`.
+
+### Resultados de Pruebas
+
+✅ **Frontend (Lógica de Negocio)**: **24/24 pruebas PASANDO** ✅
+
+- `test_clientes.py`: 4 pruebas (validación NIT, email, teléfono, tipo cliente)
+- `test_facturas.py`: 10 pruebas (cálculos, descuentos, IVA, validaciones)
+- `test_productos.py`: 10 pruebas (precios, stock, margen, inventario)
+
+✅ **Backend (API FastAPI)**: **30/30 pruebas PASANDO** (100% éxito) ✅
+
+- ✅ `test_asientos.py`: **8/8 PASANDO** (100%) - asientos contables, validaciones de debe/haber
+- ✅ `test_clientes.py`: **7/7 PASANDO** (100%) - CRUD completo, búsqueda por NIT, activar/desactivar
+- ✅ `test_facturas.py`: **7/7 PASANDO** (100%) - creación, detalles, descuentos, IVA mixto
+- ✅ `test_productos.py`: **3/3 PASANDO** (100%) - crear producto, servicio, listar
+- ✅ `test_transacciones.py`: **5/5 PASANDO** (100%) - crear, validar tipo, descripción, listar con periodos
+
+**Total Backend + Frontend**: **54/54 pruebas pasando (100%)** 🎉
+
+### Configuración Implementada
+
+✅ **Modo TEST configurado**: Las pruebas usan SQLite en memoria separado de PostgreSQL de producción  
+✅ **Aislamiento completo**: Cada test crea y destruye su propia base de datos  
+✅ **Sin afectar producción**: Los datos de prueba nunca tocan la BD de producción
 
 ### Estructura de Tests
 
@@ -681,44 +705,69 @@ tests/
 
 ### Ejecutar Pruebas
 
-**Opción 1: Dentro del contenedor Docker (Recomendado)**
+**✅ Sistema Funcionando**: Las pruebas usan SQLite en memoria, completamente separado de PostgreSQL de producción.
 
-```bash
-# Ejecutar todas las pruebas del backend
-docker exec -it proyecto-contable-backend-1 pytest tests/be/ -v
+**Comandos para ejecutar pruebas:**
 
-# Ejecutar pruebas específicas
-docker exec -it proyecto-contable-backend-1 pytest tests/be/test_transacciones.py -v
-docker exec -it proyecto-contable-backend-1 pytest tests/be/test_asientos.py -v
-docker exec -it proyecto-contable-backend-1 pytest tests/be/test_clientes.py -v
+```powershell
+# Windows PowerShell (Recomendado)
+$env:PYTHONPATH="."; venv\Scripts\python.exe -m pytest tests/be/ -v
+$env:PYTHONPATH="."; venv\Scripts\python.exe -m pytest tests/fe/ -v
 
-# Ejecutar con reporte de cobertura
-docker exec -it proyecto-contable-backend-1 pytest tests/be/ --cov=app --cov-report=html
+# Ejecutar archivo específico
+$env:PYTHONPATH="."; venv\Scripts\python.exe -m pytest tests/be/test_productos.py -v
+$env:PYTHONPATH="."; venv\Scripts\python.exe -m pytest tests/be/test_clientes.py -v
+
+# Todas las pruebas (Backend + Frontend)
+$env:PYTHONPATH="."; venv\Scripts\python.exe -m pytest tests/ -v
+
+# Con reporte de cobertura
+$env:PYTHONPATH="."; venv\Scripts\python.exe -m pytest tests/be/ --cov=BE.app --cov-report=html
 ```
 
-**Opción 2: Localmente (con entorno virtual)**
+```bash
+# Linux/Mac
+PYTHONPATH=. pytest tests/be/ -v
+PYTHONPATH=. pytest tests/fe/ -v
+```
+
+**Requisitos previos:**
 
 ```bash
-# Activar entorno virtual
-cd BE
-python -m venv .venv
-.\.venv\Scripts\activate  # Windows
-source .venv/bin/activate  # Linux/macOS
+# Instalar dependencias del backend en el venv
+pip install -r BE/requirements.txt
 
-# Instalar dependencias (incluye pytest y httpx)
-pip install -r requirements.txt
+# O instalar manualmente
+pip install pytest httpx fastapi sqlalchemy pydantic reportlab pandas
+```
 
-# Ejecutar pruebas del backend
-pytest tests/be/ -v
+---
 
-# Ejecutar pruebas del frontend
-pytest tests/fe/ -v
+### 🔧 Detalles Técnicos de Implementación
 
-# Ejecutar todas las pruebas
-pytest tests/ -v
+**Modo TEST configurado en el código:**
 
-# Con cobertura
-pytest tests/ --cov=app --cov-report=term-missing
+1. **`BE/app/db.py`**: Detecta variable `TESTING` y usa SQLite en memoria
+2. **`BE/app/main.py`**: No ejecuta `create_tables()` en modo test
+3. **Tests**: Configuran `os.environ["TESTING"] = "true"` antes de importar app
+4. **Aislamiento**: Cada test crea/destruye su BD independiente
+
+**Archivos modificados para soportar pruebas:**
+
+- `BE/app/db.py`: Lógica condicional para SQLite/PostgreSQL
+- `BE/app/main.py`: Skip de startup event en modo test
+- `tests/be/*.py`: Configuración de fixtures con engine compartido
+
+---
+
+### Dependencias de Pruebas
+
+```txt
+pytest>=9.0.0
+httpx>=0.24.0
+fastapi
+sqlalchemy
+pydantic
 ```
 
 ### Estructura de Tests

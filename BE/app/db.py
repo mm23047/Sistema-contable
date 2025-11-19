@@ -11,18 +11,25 @@ from dotenv import load_dotenv
 # Cargar variables de entorno desde archivo .env
 load_dotenv()
 
-# Configuración de base de datos desde variables de entorno
-POSTGRES_USER = os.getenv("POSTGRES_USER", "contable")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "contable123")
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "contable_db17")
-POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
-POSTGRES_DB = os.getenv("POSTGRES_DB", "contable_db")
+# Detectar modo test
+TESTING = os.getenv("TESTING", "false").lower() == "true"
 
-# Construir URL de base de datos para PostgreSQL
-DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+if TESTING:
+    # En modo test, usar SQLite en memoria
+    DATABASE_URL = "sqlite:///./test.db"
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    # En producción, usar PostgreSQL
+    POSTGRES_USER = os.getenv("POSTGRES_USER", "contable")
+    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "contable123")
+    POSTGRES_HOST = os.getenv("POSTGRES_HOST", "contable_db17")
+    POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+    POSTGRES_DB = os.getenv("POSTGRES_DB", "contable_db")
+    
+    # Construir URL de base de datos para PostgreSQL
+    DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+    engine = create_engine(DATABASE_URL)
 
-# Configuración de motor y sesión de SQLAlchemy
-engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

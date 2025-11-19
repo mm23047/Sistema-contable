@@ -18,6 +18,9 @@ from BE.app.routes import (
 from BE.app.db import create_tables
 import os
 
+# Detectar si estamos en modo test
+TESTING = os.getenv("TESTING", "false").lower() == "true"
+
 # Inicializar aplicación FastAPI
 app = FastAPI(
     title="Sistema Contable API",
@@ -49,7 +52,9 @@ app.include_router(producto_routes.router)
 @app.on_event("startup")
 def startup_event():
     """Inicializar tablas de la base de datos al arrancar"""
-    create_tables()
+    # No crear tablas en modo test (los tests usan su propia BD)
+    if not TESTING:
+        create_tables()
 
 @app.get("/")
 def read_root():

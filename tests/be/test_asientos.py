@@ -2,29 +2,17 @@
 Unit tests for Asientos (Journal Entries) functionality.
 Tests the creation, validation, and business logic for journal entries.
 """
+import os
+os.environ["TESTING"] = "true"  # Debe estar ANTES de importar app
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from BE.app.main import app
-from BE.app.db import get_db, Base
+from BE.app.db import Base, engine
 from BE.app.models.transaccion import Transaccion
 from BE.app.models.catalogo_cuentas import CatalogoCuentas
+from BE.app.db import SessionLocal
 from datetime import datetime
-
-# Configuración de base de datos de prueba
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-app.dependency_overrides[get_db] = override_get_db
 
 @pytest.fixture
 def test_client():
@@ -32,7 +20,7 @@ def test_client():
     Base.metadata.create_all(bind=engine)
     
     # Crear datos de prueba
-    db = TestingSessionLocal()
+    db = SessionLocal()
     try:
         # Crear cuenta de prueba
         test_account = CatalogoCuentas(
@@ -49,6 +37,7 @@ def test_client():
             fecha_transaccion=datetime(2025, 8, 1, 10, 0, 0),
             descripcion="Test transaction",
             tipo="INGRESO",
+            categoria="VENTA",
             moneda="USD",
             usuario_creacion="test_user"
         )
@@ -92,7 +81,7 @@ def test_create_asiento_invalid_transaction(test_client):
     response = test_client.post("/api/asientos/", json=asiento_data)
     
     assert response.status_code == 400
-    assert "Transaction not found" in response.text
+    assert "Transacción no encontrada" in response.text or "Transaction not found" in response.text
 
 def test_create_asiento_invalid_account(test_client):
     """Prueba de creación de asiento contable con cuenta inexistente"""
@@ -106,9 +95,9 @@ def test_create_asiento_invalid_account(test_client):
     response = test_client.post("/api/asientos/", json=asiento_data)
     
     assert response.status_code == 400
-    assert "Account not found" in response.text
+    assert "Cuenta no encontrada" in response.text or "Account not found" in response.text
 
-def test_create_asiento_both_debe_haber(client):
+def test_create_asiento_both_debe_haber(test_client):
     """Prueba de creación de asiento contable con debe y haber > 0 (inválido)"""
     asiento_data = {
         "id_transaccion": 1,
@@ -121,7 +110,7 @@ def test_create_asiento_both_debe_haber(client):
     
     assert response.status_code == 422  # Pydantic validation error
 
-def test_create_asiento_neither_debe_haber(client):
+def test_create_asiento_neither_debe_haber(test_client):
     """Prueba de creación de asiento contable con debe y haber = 0 (inválido)"""
     asiento_data = {
         "id_transaccion": 1,
@@ -134,7 +123,7 @@ def test_create_asiento_neither_debe_haber(client):
     
     assert response.status_code == 422  # Pydantic validation error
 
-def test_create_asiento_credit_only(client):
+def test_create_asiento_credit_only(test_client):
     """Prueba de creación exitosa de asiento contable solo con haber"""
     asiento_data = {
         "id_transaccion": 1,
@@ -149,7 +138,7 @@ def test_create_asiento_credit_only(client):
     data = response.json()
     assert "id_asiento" in data
 
-def test_get_asiento_not_found(client):
+def test_get_asiento_not_found(test_client):
     """Prueba de obtener asiento contable inexistente"""
     response = test_client.get("/api/asientos/999")
     

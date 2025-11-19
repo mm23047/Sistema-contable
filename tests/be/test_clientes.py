@@ -2,26 +2,13 @@
 Pruebas unitarias para el módulo de Clientes (API).
 Prueba endpoints CRUD de clientes.
 """
+import os
+os.environ["TESTING"] = "true"  # Debe estar ANTES de importar app
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from BE.app.main import app
-from BE.app.db import get_db, Base
-
-# Configuración de base de datos de pruebas
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-app.dependency_overrides[get_db] = override_get_db
+from BE.app.db import Base, engine
 
 @pytest.fixture
 def test_client():
@@ -50,7 +37,7 @@ def test_crear_cliente_individual(test_client):
     assert data["nombre"] == "Juan Pérez"
     assert data["tipo_cliente"] == "INDIVIDUAL"
     assert data["nit"] == "0614-050190-101-7"
-    assert data["activo"] == True
+    assert data["activo"] == "SI"
 
 def test_crear_cliente_empresa(test_client):
     """Probar creación de cliente empresa"""
@@ -162,12 +149,12 @@ def test_desactivar_cliente(test_client):
     cliente_id = create_response.json()["id_cliente"]
     
     # Desactivar
-    update_data = {"activo": False}
+    update_data = {"activo": "NO"}
     response = test_client.put(f"/api/clientes/{cliente_id}", json=update_data)
     
     assert response.status_code == 200
     data = response.json()
-    assert data["activo"] == False
+    assert data["activo"] == "NO"
 
 def test_buscar_cliente_por_nit(test_client):
     """Probar búsqueda de cliente por NIT"""
