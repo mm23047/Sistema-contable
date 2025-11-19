@@ -28,8 +28,8 @@ class Cliente(Base):
     tipo_cliente = Column(String(50), nullable=True, default="INDIVIDUAL")  # INDIVIDUAL, EMPRESA
     notas = Column(Text, nullable=True)
     
-    # Auditoría
-    fecha_registro = Column(TIMESTAMP, server_default=func.now(), nullable=False)
+    # Auditoría 
+    fecha_registro = Column(TIMESTAMP, server_default=func.current_timestamp(), nullable=False) 
     activo = Column(String(10), nullable=False, default="SI")  # SI, NO
     
     # Relaciones

@@ -43,8 +43,8 @@ class Factura(Base):
     condiciones_pago = Column(String(100), nullable=True, default="Contado")
     vendedor = Column(String(100), nullable=True)
     
-    # Fechas
-    fecha_emision = Column(TIMESTAMP, server_default=func.now(), nullable=False)
+    # Fechas 
+    fecha_emision = Column(TIMESTAMP, server_default=func.current_timestamp(), nullable=False)
     fecha_vencimiento = Column(TIMESTAMP, nullable=True)
     
     # Relaciones

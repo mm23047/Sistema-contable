@@ -28,6 +28,7 @@ from BE.app.services.facturacion_service import (
     obtener_estadisticas_facturacion,
     obtener_top_clientes
 )
+import json
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -280,6 +281,53 @@ def descargar_factura_pdf(
     elements.append(info_table)
     elements.append(Spacer(1, 0.3*inch))
     
+    # ========== TABLA DE PRODUCTOS/SERVICIOS ==========
+    if hasattr(factura, 'detalles') and factura.detalles:
+        productos_header_style = ParagraphStyle('ProductosHeader', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', textColor=colors.whitesmoke)
+        productos_data = [
+            [
+                Paragraph("#", productos_header_style),
+                Paragraph("PRODUCTO/SERVICIO", productos_header_style),
+                Paragraph("CANT.", productos_header_style),
+                Paragraph("P. UNIT.", productos_header_style),
+                Paragraph("DESC.", productos_header_style),
+                Paragraph("TOTAL", productos_header_style)
+            ]
+        ]
+        
+        for idx, detalle in enumerate(factura.detalles, 1):
+            producto_nombre = detalle.producto.nombre if hasattr(detalle, 'producto') and detalle.producto else "Producto"
+            productos_data.append([
+                str(idx),
+                producto_nombre,
+                f"{float(detalle.cantidad):.2f}",
+                f"${float(detalle.precio_unitario):,.2f}",
+                f"{float(detalle.descuento_monto):,.2f}" if detalle.descuento_monto else "$0.00",
+                f"${float(detalle.total):,.2f}"
+            ])
+        
+        productos_table = Table(productos_data, colWidths=[0.4*inch, 2.5*inch, 0.8*inch, 1*inch, 0.8*inch, 1*inch])
+        productos_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1f4788')),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9f9f9')])
+        ]))
+        
+        elements.append(productos_table)
+        elements.append(Spacer(1, 0.3*inch))
+    elif factura.producto_servicio:
+        # Si es factura legacy
+        legacy_style = ParagraphStyle('Legacy', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#666666'))
+        elements.append(Paragraph("<b>Descripción del Servicio:</b>", styles['Normal']))
+        elements.append(Paragraph(factura.producto_servicio, legacy_style))
+        elements.append(Spacer(1, 0.3*inch))
+    
     # ========== TOTALES ==========
     totales_header_style = ParagraphStyle('TotalesHeader', parent=styles['Normal'], fontSize=11, fontName='Helvetica-Bold', textColor=colors.whitesmoke)
     totales_data = [
@@ -452,6 +500,59 @@ def descargar_factura_excel(
         ws.merge_cells(f'B{current_row}:F{current_row}')
         current_row += 1
     
+    # ========== PRODUCTOS/SERVICIOS ==========
+    if hasattr(factura, 'detalles') and factura.detalles:
+        current_row += 2
+        ws[f'A{current_row}'] = "PRODUCTOS/SERVICIOS"
+        ws[f'A{current_row}'].font = header_font
+        ws[f'A{current_row}'].fill = header_fill
+        ws.merge_cells(f'A{current_row}:F{current_row}')
+        
+        current_row += 1
+        # Encabezados de tabla de productos
+        productos_headers = ["#", "Producto/Servicio", "Cantidad", "P. Unitario", "Descuento", "Total"]
+        for col_idx, header in enumerate(productos_headers, start=1):
+            cell = ws.cell(row=current_row, column=col_idx)
+            cell.value = header
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal='center')
+        
+        # Datos de productos
+        current_row += 1
+        for idx, detalle in enumerate(factura.detalles, 1):
+            producto_nombre = detalle.producto.nombre if hasattr(detalle, 'producto') and detalle.producto else "Producto"
+            
+            ws[f'A{current_row}'] = idx
+            ws[f'B{current_row}'] = producto_nombre
+            ws[f'C{current_row}'] = float(detalle.cantidad)
+            ws[f'D{current_row}'] = float(detalle.precio_unitario)
+            ws[f'E{current_row}'] = float(detalle.descuento_monto) if detalle.descuento_monto else 0.0
+            ws[f'F{current_row}'] = float(detalle.total)
+            
+            # Formato
+            for col in ['A', 'B', 'C', 'D', 'E', 'F']:
+                ws[f'{col}{current_row}'].border = thin_border
+            
+            ws[f'C{current_row}'].number_format = '#,##0.00'
+            ws[f'D{current_row}'].number_format = '$#,##0.00'
+            ws[f'E{current_row}'].number_format = '$#,##0.00'
+            ws[f'F{current_row}'].number_format = '$#,##0.00'
+            
+            ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+            ws[f'C{current_row}'].alignment = Alignment(horizontal='center')
+            ws[f'D{current_row}'].alignment = Alignment(horizontal='right')
+            ws[f'E{current_row}'].alignment = Alignment(horizontal='right')
+            ws[f'F{current_row}'].alignment = Alignment(horizontal='right')
+            
+            current_row += 1
+    elif factura.producto_servicio:
+        current_row += 2
+        ws.merge_cells(f'A{current_row}:F{current_row}')
+        ws[f'A{current_row}'] = "Descripción: " + factura.producto_servicio
+        ws[f'A{current_row}'].alignment = Alignment(wrap_text=True)
+    
     # ========== TOTALES ==========
     current_row += 2
     ws[f'D{current_row}'] = "CONCEPTO"
@@ -516,4 +617,96 @@ def descargar_factura_excel(
         iter([excel_buffer.getvalue()]),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename=Factura_{factura.numero_factura}.xlsx"}
+    )
+
+
+# =========================================================
+# 🟦 DESCARGAR FACTURA EN JSON
+# =========================================================
+@router.get("/{factura_id}/descargar-json")
+def descargar_factura_json(
+    factura_id: UUID,
+    db: Session = Depends(get_db)
+):
+    """Genera y descarga factura completa en formato JSON con todos los detalles"""
+    factura = obtener_factura_por_id(db, factura_id)
+    
+    if not factura:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Factura {factura_id} no encontrada"
+        )
+    
+    # Construir objeto JSON completo
+    factura_json = {
+        "factura": {
+            "id_factura": str(factura.id_factura),
+            "numero_factura": factura.numero_factura,
+            "fecha_emision": factura.fecha_emision.isoformat() if factura.fecha_emision else None,
+            "fecha_vencimiento": factura.fecha_vencimiento.isoformat() if factura.fecha_vencimiento else None,
+            "condiciones_pago": factura.condiciones_pago,
+            "vendedor": factura.vendedor,
+            "notas": factura.notas
+        },
+        "cliente": {
+            "id_cliente": factura.id_cliente,
+            "nombre": factura.cliente,
+            "nit": factura.nit_cliente,
+            "direccion": factura.direccion_cliente,
+            "telefono": factura.telefono_cliente,
+            "email": factura.email_cliente
+        },
+        "detalles": [],
+        "totales": {
+            "subtotal": float(factura.subtotal) if factura.subtotal else 0.0,
+            "descuento": float(factura.descuento) if factura.descuento else 0.0,
+            "iva": float(factura.iva) if factura.iva else 0.0,
+            "monto_total": float(factura.monto_total) if factura.monto_total else 0.0
+        },
+        "metadata": {
+            "fecha_generacion": datetime.now().isoformat(),
+            "version": "1.0",
+            "sistema": "Sistema Contable"
+        }
+    }
+    
+    # Agregar detalles de productos si existen
+    if hasattr(factura, 'detalles') and factura.detalles:
+        for detalle in factura.detalles:
+            detalle_dict = {
+                "id_detalle": detalle.id_detalle,
+                "producto": {
+                    "id_producto": detalle.id_producto,
+                    "nombre": detalle.producto.nombre if hasattr(detalle, 'producto') and detalle.producto else None,
+                    "descripcion": detalle.producto.descripcion if hasattr(detalle, 'producto') and detalle.producto else None
+                },
+                "cantidad": float(detalle.cantidad) if detalle.cantidad else 0.0,
+                "precio_unitario": float(detalle.precio_unitario) if detalle.precio_unitario else 0.0,
+                "descuento_porcentaje": float(detalle.descuento_porcentaje) if detalle.descuento_porcentaje else 0.0,
+                "descuento_monto": float(detalle.descuento_monto) if detalle.descuento_monto else 0.0,
+                "subtotal_linea": float(detalle.subtotal) if detalle.subtotal else 0.0,
+                "iva_linea": float(detalle.iva) if detalle.iva else 0.0,
+                "total_linea": float(detalle.total) if detalle.total else 0.0
+            }
+            factura_json["detalles"].append(detalle_dict)
+    elif factura.producto_servicio:
+        # Si es factura legacy sin detalles normalizados
+        factura_json["detalles"].append({
+            "descripcion_legacy": factura.producto_servicio,
+            "cantidad": 1.0,
+            "precio_unitario": float(factura.subtotal) if factura.subtotal else 0.0,
+            "total_linea": float(factura.subtotal) if factura.subtotal else 0.0
+        })
+    
+    # Convertir a JSON con formato bonito
+    json_content = json.dumps(factura_json, ensure_ascii=False, indent=2)
+    json_bytes = json_content.encode('utf-8')
+    
+    return StreamingResponse(
+        iter([json_bytes]),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f"attachment; filename=Factura_{factura.numero_factura}.json",
+            "Content-Type": "application/json; charset=utf-8"
+        }
     )

@@ -152,7 +152,7 @@ def render_page(backend_url: str):
 
                 # Botones de descarga
                 st.markdown("### 📥 Descargar Factura")
-                col1, col2, col3 = st.columns([1, 1, 2])
+                col1, col2, col3 = st.columns(3)
 
                 # PDF
                 with col1:
@@ -209,6 +209,34 @@ def render_page(backend_url: str):
                                 st.error(f"❌ Error generando Excel: {excel_response.status_code}")
                         except Exception as e:
                             st.error(f"❌ Error al descargar Excel: {str(e)}")
+
+                # JSON
+                with col3:
+                    if st.button(
+                            "📋 Descargar JSON",
+                            key=f"json_{fac['id_factura']}",
+                            use_container_width=True,
+                            type="secondary"
+                    ):
+                        try:
+                            json_response = requests.get(
+                                f"{backend_url}/api/facturas/{fac['id_factura']}/descargar-json",
+                                timeout=30
+                            )
+
+                            if json_response.status_code == 200:
+                                st.download_button(
+                                    label="⬇️ Clic aquí para descargar JSON",
+                                    data=json_response.content,
+                                    file_name=f"factura_{fac['numero_factura']}.json",
+                                    mime="application/json",
+                                    key=f"btn_json_{fac['id_factura']}",
+                                    use_container_width=True
+                                )
+                            else:
+                                st.error(f"❌ Error generando JSON: {json_response.status_code}")
+                        except Exception as e:
+                            st.error(f"❌ Error al descargar JSON: {str(e)}")
 
     # ============================
     # TAB 2: ESTADÍSTICAS
@@ -326,145 +354,167 @@ def render_page(backend_url: str):
         if 'lineas_factura' not in st.session_state:
             st.session_state.lineas_factura = []
 
-        with st.form("crear_factura_form"):
-            st.markdown("#### 1️⃣ Selección de Cliente")
-            
-            # Crear diccionario de clientes
-            clientes_dict = {f"{c['nombre']} - {c['nit']}": c for c in clientes_disponibles}
-            cliente_seleccionado_str = st.selectbox(
-                "Cliente *",
-                options=list(clientes_dict.keys())
+        # ====== SECCIÓN 1: SELECCIÓN DE CLIENTE ======
+        st.markdown("#### 1️⃣ Selección de Cliente")
+        
+        # Crear diccionario de clientes
+        clientes_dict = {f"{c['nombre']} - {c['nit']}": c for c in clientes_disponibles}
+        cliente_seleccionado_str = st.selectbox(
+            "Cliente *",
+            options=list(clientes_dict.keys()),
+            key="cliente_select_main"
+        )
+        cliente_seleccionado = clientes_dict[cliente_seleccionado_str]
+        
+        # Mostrar info del cliente
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.info(f"📧 {cliente_seleccionado.get('email', 'N/A')}")
+        with col2:
+            st.info(f"📱 {cliente_seleccionado.get('telefono', 'N/A')}")
+        with col3:
+            st.info(f"🏢 {cliente_seleccionado.get('tipo_cliente', 'N/A')}")
+
+        st.markdown("---")
+
+        # ====== SECCIÓN 2: AGREGAR PRODUCTOS (FUERA DEL FORM) ======
+        st.markdown("#### 2️⃣ Agregar Productos/Servicios")
+        
+        # Crear diccionario de productos
+        productos_dict = {f"{p['codigo']} - {p['nombre']} (${float(p['precio_unitario']):.2f})": p for p in productos_disponibles}
+
+        st.markdown("**Selecciona un producto:**")
+        col1, col2, col3, col4 = st.columns([3, 1, 1, 2])
+        with col1:
+            producto_agregar_key = st.selectbox(
+                "Producto",
+                options=list(productos_dict.keys()),
+                key="producto_select_main"
             )
-            cliente_seleccionado = clientes_dict[cliente_seleccionado_str]
-            
-            # Mostrar info del cliente
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.info(f"📧 {cliente_seleccionado.get('contacto_email', 'N/A')}")
-            with col2:
-                st.info(f"📱 {cliente_seleccionado.get('contacto_telefono', 'N/A')}")
-            with col3:
-                st.info(f"🏢 {cliente_seleccionado.get('tipo_cliente', 'N/A')}")
-
-            st.markdown("#### 2️⃣ Líneas de Productos/Servicios")
-            
-            # Crear diccionario de productos
-            productos_dict = {f"{p['codigo']} - {p['nombre']} (${float(p['precio_unitario']):.2f})": p for p in productos_disponibles}
-
-            # Agregar producto a líneas (fuera del form para interactividad)
-            st.markdown("**Agregar Productos:**")
-            col1, col2, col3 = st.columns([3, 1, 1])
-            with col1:
-                producto_agregar_key = st.selectbox(
-                    "Seleccionar Producto",
-                    options=list(productos_dict.keys()),
-                    key="producto_select_form"
-                )
-            with col2:
-                cantidad_agregar = st.number_input(
-                    "Cantidad",
-                    min_value=1.0,
-                    step=1.0,
-                    value=1.0,
-                    key="cantidad_input_form"
-                )
-            with col3:
-                descuento_pct = st.number_input(
-                    "Desc %",
-                    min_value=0.0,
-                    max_value=100.0,
-                    step=1.0,
-                    value=0.0,
-                    key="descuento_input_form"
-                )
-
-            # Nota: el botón de agregar se manejará fuera del form principal
-            
-            # Mostrar tabla de líneas agregadas
-            if st.session_state.lineas_factura:
-                st.markdown("**Productos Agregados:**")
-                
-                # Calcular totales por línea
-                lineas_display = []
-                subtotal_general = 0.0
-                iva_general = 0.0
-                
-                for idx, linea in enumerate(st.session_state.lineas_factura):
-                    subtotal_linea = linea['cantidad'] * linea['precio_unitario']
-                    desc_linea = subtotal_linea * (linea['descuento_porcentaje'] / 100)
-                    subtotal_linea_neto = subtotal_linea - desc_linea
-                    
-                    if linea['aplica_iva'] == 'SI':
-                        iva_linea = subtotal_linea_neto * 0.13
-                    else:
-                        iva_linea = 0.0
-                    
-                    total_linea = subtotal_linea_neto + iva_linea
-                    
-                    subtotal_general += subtotal_linea_neto
-                    iva_general += iva_linea
-                    
-                    lineas_display.append({
-                        '#': idx + 1,
-                        'Código': linea['codigo'],
-                        'Producto': linea['nombre'],
-                        'Cant': linea['cantidad'],
-                        'Precio': f"${linea['precio_unitario']:.2f}",
-                        'Desc %': f"{linea['descuento_porcentaje']:.1f}%",
-                        'Subtotal': f"${subtotal_linea_neto:.2f}",
-                        'IVA': f"${iva_linea:.2f}",
-                        'Total': f"${total_linea:.2f}"
-                    })
-                
-                df_lineas = pd.DataFrame(lineas_display)
-                st.dataframe(df_lineas, use_container_width=True, hide_index=True)
-            else:
-                st.info("📝 Usa los campos de arriba y el botón 'Agregar Producto' (abajo) para construir la factura")
-
-            st.markdown("#### 3️⃣ Descuento Global y Totales")
-            descuento_global = st.number_input(
-                "Descuento Global (opcional)",
+        with col2:
+            cantidad_agregar = st.number_input(
+                "Cantidad",
+                min_value=0.01,
+                step=1.0,
+                value=1.0,
+                key="cantidad_input_main"
+            )
+        with col3:
+            descuento_pct = st.number_input(
+                "Desc %",
                 min_value=0.0,
-                step=0.01,
+                max_value=100.0,
+                step=1.0,
                 value=0.0,
-                format="%.2f",
-                key="descuento_global_input"
+                key="descuento_input_main"
             )
+        with col4:
+            if st.button("➕ Agregar a Factura", use_container_width=True, type="primary"):
+                if producto_agregar_key in productos_dict:
+                    producto_sel = productos_dict[producto_agregar_key]
+                    st.session_state.lineas_factura.append({
+                        'id_producto': producto_sel['id_producto'],
+                        'codigo': producto_sel['codigo'],
+                        'nombre': producto_sel['nombre'],
+                        'cantidad': cantidad_agregar,
+                        'precio_unitario': float(producto_sel['precio_unitario']),
+                        'descuento_porcentaje': descuento_pct,
+                        'aplica_iva': producto_sel['aplica_iva']
+                    })
+                    st.success(f"✅ Producto agregado: {producto_sel['nombre']}")
+                    st.rerun()
+
+        st.markdown("---")
+        # ====== SECCIÓN 3: MOSTRAR LÍNEAS AGREGADAS ======
+        if st.session_state.lineas_factura:
+            st.markdown("**📝 Productos en la Factura:**")
             
-            # Calcular totales
+            # Calcular totales por línea
+            lineas_display = []
+            subtotal_general = 0.0
+            iva_general = 0.0
+            
+            for idx, linea in enumerate(st.session_state.lineas_factura):
+                subtotal_linea = linea['cantidad'] * linea['precio_unitario']
+                desc_linea = subtotal_linea * (linea['descuento_porcentaje'] / 100)
+                subtotal_linea_neto = subtotal_linea - desc_linea
+                
+                if linea['aplica_iva'] == 'SI':
+                    iva_linea = subtotal_linea_neto * 0.13
+                else:
+                    iva_linea = 0.0
+                
+                total_linea = subtotal_linea_neto + iva_linea
+                
+                subtotal_general += subtotal_linea_neto
+                iva_general += iva_linea
+                
+                lineas_display.append({
+                    '#': idx + 1,
+                    'Código': linea['codigo'],
+                    'Producto': linea['nombre'],
+                    'Cant': linea['cantidad'],
+                    'Precio': f"${linea['precio_unitario']:.2f}",
+                    'Desc %': f"{linea['descuento_porcentaje']:.1f}%",
+                    'Subtotal': f"${subtotal_linea_neto:.2f}",
+                    'IVA': f"${iva_linea:.2f}",
+                    'Total': f"${total_linea:.2f}"
+                })
+            
+            df_lineas = pd.DataFrame(lineas_display)
+            st.dataframe(df_lineas, use_container_width=True, hide_index=True)
+            
+            # Botón para limpiar líneas
+            if st.button("🗑️ Limpiar Todos los Productos", type="secondary"):
+                st.session_state.lineas_factura = []
+                st.rerun()
+        else:
+            st.info("📝 Agrega productos usando el selector de arriba")
+
+        st.markdown("---")
+
+        # ====== FORMULARIO FINAL PARA CREAR FACTURA ======
+        with st.form("crear_factura_form"):
+            st.markdown("#### 3️⃣ Información Adicional y Totales")
+            
+            # Descuento global y totales
+            col1, col2 = st.columns(2)
+            with col1:
+                descuento_global = st.number_input(
+                    "Descuento Global Adicional ($)",
+                    min_value=0.0,
+                    step=0.01,
+                    value=0.0,
+                    format="%.2f",
+                    key="descuento_global_input"
+                )
+            
+            # Calcular totales finales
             if st.session_state.lineas_factura:
                 monto_total_final = subtotal_general + iva_general - descuento_global
                 
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Subtotal", f"${subtotal_general:.2f}")
                 with col2:
-                    st.metric("IVA Total", f"${iva_general:.2f}")
-                with col3:
-                    st.metric("Descuento Global", f"${descuento_global:.2f}")
-                with col4:
-                    st.metric("💰 TOTAL", f"${monto_total_final:.2f}", delta="Final")
-            else:
-                st.warning("⚠️ Agrega al menos un producto para ver los totales")
+                    st.markdown("**Totales:**")
+                    st.write(f"Subtotal: ${subtotal_general:.2f}")
+                    st.write(f"IVA: ${iva_general:.2f}")
+                    st.write(f"Descuento Global: ${descuento_global:.2f}")
+                    st.write(f"**💰 TOTAL: ${monto_total_final:.2f}**")
 
-            st.markdown("#### 4️⃣ Información Adicional")
+            st.markdown("---")
+            st.markdown("#### 4️⃣ Datos Adicionales")
+            
             col1, col2 = st.columns(2)
             with col1:
-                vendedor = st.text_input("Vendedor", placeholder="Juan Pérez")
-                condiciones = st.selectbox("Condiciones de Pago", ["Contado", "Crédito"])
+                vendedor = st.text_input("Vendedor", placeholder="Juan Pérez", key="vendedor_input")
+                condiciones = st.selectbox("Condiciones de Pago", ["Contado", "Crédito"], key="condiciones_input")
             with col2:
-                fecha_vencimiento = st.date_input("Fecha de Vencimiento", value=None)
-                notas = st.text_area("Notas", placeholder="Información adicional...")
+                fecha_vencimiento = st.date_input("Fecha de Vencimiento", value=None, key="fecha_venc_input")
+                notas = st.text_area("Notas", placeholder="Información adicional...", key="notas_input")
 
+            st.markdown("---")
             col1, col2 = st.columns(2)
             with col1:
-                submitted = st.form_submit_button("✅ Crear Factura", use_container_width=True, type="primary")
-            with col2:
-                limpiar = st.form_submit_button("🗑️ Limpiar Líneas", use_container_width=True)
-
-            if limpiar:
-                st.session_state.lineas_factura = []
-                st.rerun()
+                submitted = st.form_submit_button("✅ Crear Factura Completa", use_container_width=True, type="primary")
 
             if submitted:
                 if not st.session_state.lineas_factura:
@@ -514,23 +564,3 @@ def render_page(backend_url: str):
 
                     except Exception as e:
                         st.error(f"❌ Error al crear factura: {str(e)}")
-
-        # Botón fuera del form para agregar producto (para evitar resubmit del form)
-        st.markdown("---")
-        col1, col2 = st.columns([3, 1])
-        with col2:
-            if st.button("➕ Agregar Producto a Factura", use_container_width=True, type="secondary"):
-                # Obtener valores actuales de los inputs
-                if producto_agregar_key in productos_dict:
-                    producto_sel = productos_dict[producto_agregar_key]
-                    st.session_state.lineas_factura.append({
-                        'id_producto': producto_sel['id_producto'],
-                        'codigo': producto_sel['codigo'],
-                        'nombre': producto_sel['nombre'],
-                        'cantidad': cantidad_agregar,
-                        'precio_unitario': float(producto_sel['precio_unitario']),
-                        'descuento_porcentaje': descuento_pct,
-                        'aplica_iva': producto_sel['aplica_iva']
-                    })
-                    st.success(f"✅ Producto agregado: {producto_sel['nombre']}")
-                    st.rerun()
