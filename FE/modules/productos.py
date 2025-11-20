@@ -89,8 +89,8 @@ def render_page(backend_url: str):
                 # Alerta de stock bajo
                 stock_bajo = False
                 if producto['tipo'] == 'PRODUCTO':
-                    stock_actual = float(producto.get('stock_actual', 0))
-                    stock_minimo = float(producto.get('stock_minimo', 0))
+                    stock_actual = float(producto.get('stock_actual') or 0)
+                    stock_minimo = float(producto.get('stock_minimo') or 0)
                     stock_bajo = stock_actual < stock_minimo
                 
                 titulo = f"{icono} **{producto['codigo']}** - {producto['nombre']}"
@@ -110,13 +110,13 @@ def render_page(backend_url: str):
                     
                     with col2:
                         st.write(f"**Precio Unitario:** ${float(producto['precio_unitario']):,.2f}")
-                        st.write(f"**Precio Costo:** ${float(producto.get('precio_costo', 0)):,.2f}")
+                        st.write(f"**Precio Costo:** ${float(producto.get('precio_costo') or 0):,.2f}")
                         st.write(f"**Aplica IVA:** {'✅ Sí' if producto['aplica_iva'] == 'SI' else '❌ No'}")
                         
                         if producto['tipo'] == 'PRODUCTO':
                             stock_color = "🔴" if stock_bajo else "🟢"
-                            st.write(f"**Stock Actual:** {stock_color} {float(producto.get('stock_actual', 0)):.0f}")
-                            st.write(f"**Stock Mínimo:** {float(producto.get('stock_minimo', 0)):.0f}")
+                            st.write(f"**Stock Actual:** {stock_color} {float(producto.get('stock_actual') or 0):.0f}")
+                            st.write(f"**Stock Mínimo:** {float(producto.get('stock_minimo') or 0):.0f}")
                         else:
                             st.write("**Stock:** N/A (Servicio)")
                         
@@ -147,7 +147,7 @@ def render_page(backend_url: str):
                             ):
                                 st.session_state['ajustar_stock_id'] = producto['id_producto']
                                 st.session_state['ajustar_stock_nombre'] = producto['nombre']
-                                st.session_state['ajustar_stock_actual'] = float(producto.get('stock_actual', 0))
+                                st.session_state['ajustar_stock_actual'] = float(producto.get('stock_actual') or 0)
                     
                     with col3:
                         if producto['activo'] == 'SI':
@@ -312,7 +312,7 @@ def render_page(backend_url: str):
                     "Precio Costo",
                     min_value=0.0,
                     step=0.01,
-                    value=float(datos_edicion.get('precio_costo', 0.0)),
+                    value=float(datos_edicion.get('precio_costo') or 0.0),
                     format="%.2f"
                 )
             with col3:
@@ -334,7 +334,7 @@ def render_page(backend_url: str):
                         "Stock Actual",
                         min_value=0.0,
                         step=1.0,
-                        value=float(datos_edicion.get('stock_actual', 0.0)),
+                        value=float(datos_edicion.get('stock_actual') or 0.0),
                         format="%.2f"
                     )
                 with col2:
@@ -342,7 +342,7 @@ def render_page(backend_url: str):
                         "Stock Mínimo (Alerta)",
                         min_value=0.0,
                         step=1.0,
-                        value=float(datos_edicion.get('stock_minimo', 0.0)),
+                        value=float(datos_edicion.get('stock_minimo') or 0.0),
                         format="%.2f"
                     )
             else:
@@ -438,8 +438,8 @@ def render_page(backend_url: str):
                 st.warning(f"⚠️ {len(productos_bajo_stock)} producto(s) requieren reabastecimiento")
                 
                 for producto in productos_bajo_stock:
-                    stock_actual = float(producto.get('stock_actual', 0))
-                    stock_minimo = float(producto.get('stock_minimo', 0))
+                    stock_actual = float(producto.get('stock_actual') or 0)
+                    stock_minimo = float(producto.get('stock_minimo') or 0)
                     diferencia = stock_minimo - stock_actual
                     
                     with st.expander(
@@ -456,7 +456,7 @@ def render_page(backend_url: str):
                             st.metric("Faltante", f"{diferencia:.0f}", delta_color="off")
                         
                         st.write(f"**Precio Unitario:** ${float(producto['precio_unitario']):,.2f}")
-                        st.write(f"**Costo de Reabastecimiento:** ${(diferencia * float(producto.get('precio_costo', 0))):,.2f}")
+                        st.write(f"**Costo de Reabastecimiento:** ${(diferencia * float(producto.get('precio_costo') or 0)):,.2f}")
 
         except Exception as e:
             st.error(f"❌ Error obteniendo alertas: {e}")

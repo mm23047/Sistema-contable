@@ -120,10 +120,10 @@ def render_page(backend_url: str):
                 st.markdown("### 💰 Detalles Financieros")
                 col1, col2, col3, col4 = st.columns(4)
                 
-                subtotal = float(fac.get('subtotal', 0))
-                descuento = float(fac.get('descuento', 0))
-                iva = float(fac.get('iva', 0))
-                total = float(fac.get('monto_total', 0))
+                subtotal = float(fac.get('subtotal') or 0)
+                descuento = float(fac.get('descuento') or 0)
+                iva = float(fac.get('iva') or 0)
+                total = float(fac.get('monto_total') or 0)
                 
                 with col1:
                     st.metric("Subtotal", f"${subtotal:,.2f}")

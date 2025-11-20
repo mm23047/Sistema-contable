@@ -47,6 +47,9 @@ class Factura(Base):
     fecha_emision = Column(TIMESTAMP,  server_default=func.now(), nullable=False)
     fecha_vencimiento = Column(TIMESTAMP, nullable=True)
     
+    # Relación con transacciones (opcional)
+    id_transaccion = Column(Integer, ForeignKey("transacciones.id_transaccion"), nullable=True)
+    
     # Relaciones
     cliente_obj = relationship("Cliente", back_populates="facturas")
     detalles = relationship("FacturaDetalle", back_populates="factura", cascade="all, delete-orphan")

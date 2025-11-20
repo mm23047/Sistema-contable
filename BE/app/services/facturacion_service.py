@@ -143,10 +143,11 @@ def crear_factura(
             
             # Validar stock para productos físicos
             if producto.tipo == 'PRODUCTO':
-                if producto.stock_actual < detalle['cantidad']:
+                stock_actual = producto.stock_actual or 0
+                if stock_actual < detalle['cantidad']:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Stock insuficiente para {producto.nombre}. Disponible: {producto.stock_actual}, Solicitado: {detalle['cantidad']}"
+                        detail=f"Stock insuficiente para {producto.nombre}. Disponible: {stock_actual}, Solicitado: {detalle['cantidad']}"
                     )
             
             # Calcular línea
@@ -235,7 +236,7 @@ def crear_factura(
             
             # Actualizar stock si es producto físico
             if producto.tipo == 'PRODUCTO':
-                producto.stock_actual -= cantidad
+                producto.stock_actual = (producto.stock_actual or 0) - cantidad
     
     db.commit()
     db.refresh(nueva_factura)
