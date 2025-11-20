@@ -129,30 +129,10 @@ def create_transaction_form(backend_url: str):
                 if response.status_code == 201:
                     data = response.json()
                     transaction_id = data.get("id_transaccion")
-                    factura_id = data.get("id_factura")  # 👈 VIENE DEL BACKEND SOLO SI ES VENTA
 
                     st.session_state.transaccion_actual = transaction_id
 
                     st.success(f"✅ Transacción creada (ID: {transaction_id})")
-
-                    # ───────────────────────────────────────────────
-                    # 🔥 NUEVO: Mostrar link PDF solo si fue VENTA
-                    # ───────────────────────────────────────────────
-                    if categoria == "VENTA" and factura_id:
-                        st.markdown("### 🧾 Factura generada automáticamente")
-                        st.success("La transacción es de tipo **VENTA**, por lo que se creó una factura asociada.")
-
-                        factura_url = f"{backend_url}/api/facturas/{factura_id}/pdf-fiscal"
-
-                        st.markdown(
-                            f"""
-                            🔗 **Descargar Factura:**  
-                            👉 [**Clic aquí para descargar la factura PDF**]({factura_url})
-                            """,
-                            unsafe_allow_html=True
-                        )
-                    # ───────────────────────────────────────────────
-
                     st.info("💡 Ahora puedes crear asientos para esta transacción")
                     st.rerun()
 

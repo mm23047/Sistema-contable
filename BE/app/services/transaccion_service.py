@@ -2,38 +2,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 
-from BE.app.models.factura_models import Factura
 from BE.app.models.transaccion import Transaccion
 from BE.app.models.periodo import PeriodoContable
 from BE.app.models.asiento import Asiento
 from BE.app.schemas.transaccion import TransaccionCreate, TransaccionUpdate
 from typing import List, Optional
 from datetime import datetime
-
-
-# ---------------------------------------------------
-# 🟦 Obtener siguiente número correlativo de factura
-# ---------------------------------------------------
-def obtener_siguiente_numero_factura(db: Session):
-    ultima = (
-        db.query(Factura)
-        .order_by(Factura.numero_factura.desc())
-        .first()
-    )
-
-    if ultima is None:
-        return 1
-
-    # numero_factura llega como string, por eso se convierte a int
-    try:
-        ultimo_num = int(ultima.numero_factura)
-    except:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error: numero_factura '{ultima.numero_factura}' no es numérico."
-        )
-
-    return ultimo_num + 1
 
 
 # ---------------------------------------------------
@@ -77,11 +51,15 @@ def create_transaccion(db: Session, transaccion_data: TransaccionCreate) -> Tran
 
 
 # ---------------------------------------------------
-# 🟦 AGREGAR ASIENTO Y GENERAR UNA FACTURA POR ASIENTO
+# 🟦 CREAR ASIENTO PARA UNA TRANSACCIÓN
 # ---------------------------------------------------
-def agregar_asiento_y_generar_factura(db: Session, asiento_data: dict, id_transaccion: int) -> Asiento:
-
-    transaccion = get_transaccion(db, id_transaccion)
+def create_asiento_transaccion(db: Session, asiento_data: dict, id_transaccion: int) -> Asiento:
+    """
+    Crea un asiento contable asociado a una transacción.
+    Las facturas se crean independientemente.
+    """
+    # Validar que la transacción existe
+    get_transaccion(db, id_transaccion)
 
     try:
         # Crear asiento
@@ -92,29 +70,6 @@ def agregar_asiento_y_generar_factura(db: Session, asiento_data: dict, id_transa
         db.add(db_asiento)
         db.commit()
         db.refresh(db_asiento)
-
-        # ---------------------------------------------------
-        # 🧾 Generar factura por cada asiento si es VENTA
-        # ---------------------------------------------------
-        if transaccion.categoria == "VENTA":
-
-            # Calcular monto del asiento
-            monto_total = float(asiento_dict.get("debe", 0) or 0) + float(asiento_dict.get("haber", 0) or 0)
-
-            # Obtener correlativo
-            nuevo_numero = obtener_siguiente_numero_factura(db)
-
-            factura = Factura(
-                id_transaccion=id_transaccion,
-                numero_factura=str(nuevo_numero),   # se guarda como string
-                cliente=transaccion.usuario_creacion,
-                monto_total=monto_total,
-                fecha_emision=datetime.now()
-            )
-
-            db.add(factura)
-            db.commit()
-            db.refresh(factura)
 
         return db_asiento
 

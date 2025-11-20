@@ -9,34 +9,31 @@ from BE.app.schemas.asiento import AsientoCreate, AsientoRead, AsientoUpdate
 from BE.app.services.asiento_service import (
     create_asiento, get_asiento, get_asientos, update_asiento, delete_asiento
 )
+from BE.app.services.transaccion_service import create_asiento_transaccion
 
 from typing import List, Optional
-
-from BE.app.services.transaccion_service import agregar_asiento_y_generar_factura
 
 router = APIRouter(prefix="/api/asientos", tags=["Asientos"])
 
 
-# Endpoint ORIGINAL - Crear asiento simple (sin factura automática)
+# Crear asiento simple (facturas son independientes)
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def crear_asiento(asiento: AsientoCreate, db: Session = Depends(get_db)):
-    """Crear un nuevo asiento contable"""
+    """Crear un nuevo asiento contable. Las facturas se manejan independientemente."""
     nuevo_asiento = create_asiento(db, asiento)
     return {"id_asiento": nuevo_asiento.id_asiento}
 
 
-# ✅ NUEVO ENDPOINT - Crear asiento Y generar factura automática si es VENTA
-@router.post("/con-factura/{id_transaccion}", status_code=status.HTTP_201_CREATED, response_model=AsientoRead)
-def crear_asiento_con_factura(
+# Crear asiento asociado a una transacción específica
+@router.post("/transaccion/{id_transaccion}", status_code=status.HTTP_201_CREATED, response_model=AsientoRead)
+def crear_asiento_para_transaccion(
         id_transaccion: int,
         asiento: AsientoCreate,
         db: Session = Depends(get_db)
 ):
     """
-    Crear un nuevo asiento contable con generación automática de factura.
-
-    Si la transacción asociada es de tipo VENTA y es la primera vez que
-    tiene asientos, se genera automáticamente una factura.
+    Crear un asiento contable asociado a una transacción específica.
+    Las facturas se manejan de forma independiente en su propio módulo.
 
     Args:
         id_transaccion: ID de la transacción a la que pertenece el asiento
@@ -46,7 +43,7 @@ def crear_asiento_con_factura(
     Returns:
         Asiento creado con su información completa
     """
-    return agregar_asiento_y_generar_factura(db, asiento, id_transaccion)
+    return create_asiento_transaccion(db, asiento, id_transaccion)
 
 
 @router.get("/", response_model=List[AsientoRead])

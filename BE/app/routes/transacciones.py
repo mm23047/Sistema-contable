@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api/transacciones", tags=["Transacciones"])
 
 
 # ============================================================
-# 🟢 POST — CREAR TRANSACCIÓN (Si es VENTA → factura automática)
+# 🟢 POST — CREAR TRANSACCIÓN
 # ============================================================
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def crear_transaccion_route(
@@ -34,14 +34,13 @@ def crear_transaccion_route(
 ):
     """
     Crea una nueva transacción.
-    Si la categoría es 'VENTA', se genera automáticamente una factura ligada.
+    Las facturas se crean de forma independiente.
     """
     nueva_transaccion = create_transaccion(db, transaccion)
 
     return {
         "id_transaccion": nueva_transaccion.id_transaccion,
-        "categoria": nueva_transaccion.categoria,
-        "factura_creada": getattr(nueva_transaccion, "factura_creada", False)
+        "categoria": nueva_transaccion.categoria
     }
 
 

@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS public.transacciones (
     fecha_transaccion TIMESTAMP NOT NULL,
     descripcion TEXT NOT NULL,
     tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('INGRESO', 'EGRESO')),
+    categoria VARCHAR(20),
     moneda VARCHAR(3) DEFAULT 'USD' NOT NULL,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     usuario_creacion VARCHAR(50) NOT NULL,
@@ -196,6 +197,193 @@ CREATE INDEX IF NOT EXISTS idx_detalle_producto ON public.factura_detalle(id_pro
 -- =============================================
 -- MIGRACIÓN: Agregar columnas faltantes si no existen
 -- =============================================
+
+-- Agregar columnas faltantes a la tabla facturas
+DO $$
+BEGIN
+    -- Agregar id_cliente
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'id_cliente'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN id_cliente INTEGER REFERENCES public.clientes(id_cliente) ON DELETE SET NULL;
+        RAISE NOTICE 'Columna id_cliente agregada a facturas';
+    END IF;
+    
+    -- Agregar nit_cliente
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'nit_cliente'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN nit_cliente VARCHAR(20);
+        RAISE NOTICE 'Columna nit_cliente agregada a facturas';
+    END IF;
+    
+    -- Agregar direccion_cliente
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'direccion_cliente'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN direccion_cliente VARCHAR(255);
+        RAISE NOTICE 'Columna direccion_cliente agregada a facturas';
+    END IF;
+    
+    -- Agregar telefono_cliente
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'telefono_cliente'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN telefono_cliente VARCHAR(20);
+        RAISE NOTICE 'Columna telefono_cliente agregada a facturas';
+    END IF;
+    
+    -- Agregar email_cliente
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'email_cliente'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN email_cliente VARCHAR(100);
+        RAISE NOTICE 'Columna email_cliente agregada a facturas';
+    END IF;
+    
+    -- Agregar producto_servicio
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'producto_servicio'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN producto_servicio TEXT;
+        RAISE NOTICE 'Columna producto_servicio agregada a facturas';
+    END IF;
+    
+    -- Agregar fecha_vencimiento
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'fecha_vencimiento'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN fecha_vencimiento TIMESTAMP;
+        RAISE NOTICE 'Columna fecha_vencimiento agregada a facturas';
+    END IF;
+    
+    -- Agregar subtotal
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'subtotal'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN subtotal NUMERIC(12, 2) NOT NULL DEFAULT 0.00;
+        RAISE NOTICE 'Columna subtotal agregada a facturas';
+    END IF;
+    
+    -- Agregar descuento
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'descuento'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN descuento NUMERIC(12, 2) NOT NULL DEFAULT 0.00;
+        RAISE NOTICE 'Columna descuento agregada a facturas';
+    END IF;
+    
+    -- Agregar iva
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'iva'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN iva NUMERIC(12, 2) NOT NULL DEFAULT 0.00;
+        RAISE NOTICE 'Columna iva agregada a facturas';
+    END IF;
+    
+    -- Agregar notas
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'notas'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN notas TEXT;
+        RAISE NOTICE 'Columna notas agregada a facturas';
+    END IF;
+    
+    -- Agregar condiciones_pago
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'condiciones_pago'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN condiciones_pago VARCHAR(100) DEFAULT 'Contado';
+        RAISE NOTICE 'Columna condiciones_pago agregada a facturas';
+    END IF;
+    
+    -- Agregar vendedor
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'vendedor'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN vendedor VARCHAR(100);
+        RAISE NOTICE 'Columna vendedor agregada a facturas';
+    END IF;
+    
+    -- Agregar id_transaccion
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'facturas' 
+        AND column_name = 'id_transaccion'
+    ) THEN
+        ALTER TABLE public.facturas 
+        ADD COLUMN id_transaccion INTEGER REFERENCES public.transacciones(id_transaccion);
+        RAISE NOTICE 'Columna id_transaccion agregada a facturas';
+    END IF;
+END $$;
+
+-- Agregar columna categoria a transacciones si no existe
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'transacciones' 
+        AND column_name = 'categoria'
+    ) THEN
+        ALTER TABLE public.transacciones 
+        ADD COLUMN categoria VARCHAR(20);
+        RAISE NOTICE 'Columna categoria agregada a transacciones';
+    END IF;
+END $$;
 
 -- Agregar columna total_linea a factura_detalle si no existe
 DO $$
@@ -578,6 +766,142 @@ SELECT * FROM (VALUES
 WHERE NOT EXISTS (SELECT 1 FROM public.productos_servicios WHERE codigo = v.codigo);
 
 -- =============================================
+-- PASO 5.5: INSERTAR DATOS DE EJEMPLO (DEMO)
+-- =============================================
+-- Este apartado inserta datos de demostración solo si las tablas están vacías.
+-- Es seguro para instalaciones nuevas y no afecta datos existentes.
+
+-- Insertar clientes de ejemplo (solo si no hay clientes además del genérico)
+DO $$
+BEGIN
+    IF (SELECT COUNT(*) FROM public.clientes WHERE nombre != 'Cliente Contado') = 0 THEN
+        INSERT INTO public.clientes (nombre, tipo_cliente, nit, telefono, email, direccion, activo, notas)
+        VALUES
+            ('Empresa ABC S.A. de C.V.', 'EMPRESA', '0614-151289-101-5', '2245-6789', 'ventas@empresaabc.com', 'Blvd. Los Próceres #123, San Salvador', 'SI', 'Cliente corporativo principal'),
+            ('Juan Carlos Pérez', 'INDIVIDUAL', NULL, '7890-1234', 'jcperez@email.com', 'Col. Escalón, Calle Principal #45, San Salvador', 'SI', 'Cliente frecuente'),
+            ('Tienda El Ahorro', 'EMPRESA', '0614-220190-102-3', '2234-5678', 'compras@elahorro.com', 'Centro Comercial Plaza Norte, Santa Tecla', 'SI', NULL),
+            ('María Rodríguez', 'INDIVIDUAL', NULL, '6123-4567', 'maria.r@email.com', 'Urbanización Los Jardines #78, Antiguo Cuscatlán', 'SI', NULL),
+            ('Distribuidora XYZ', 'EMPRESA', '0614-180295-103-1', '2256-7890', 'info@xyzdistr.com', 'Zona Industrial, Santa Ana', 'SI', 'Cliente mayorista');
+        
+        RAISE NOTICE 'Clientes de ejemplo insertados (5 registros)';
+    END IF;
+END $$;
+
+-- Insertar productos y servicios de ejemplo (solo si no hay productos además de los básicos)
+DO $$
+BEGIN
+    IF (SELECT COUNT(*) FROM public.productos_servicios WHERE codigo NOT IN ('SERV-001', 'PROD-GEN')) = 0 THEN
+        INSERT INTO public.productos_servicios 
+        (codigo, nombre, descripcion, tipo, categoria, precio_unitario, precio_costo, unidad_medida, stock_actual, stock_minimo, aplica_iva, activo)
+        VALUES
+            -- PRODUCTOS
+            ('PROD-001', 'Laptop Dell Inspiron 15', 'Laptop para oficina, Intel i5, 8GB RAM, 256GB SSD', 'PRODUCTO', 'Electrónica', 650.00, 500.00, 'Unidad', 15.00, 5.00, 'SI', 'SI'),
+            ('PROD-002', 'Mouse Inalámbrico Logitech', 'Mouse ergonómico inalámbrico con receptor USB', 'PRODUCTO', 'Accesorios', 25.00, 15.00, 'Unidad', 50.00, 10.00, 'SI', 'SI'),
+            ('PROD-003', 'Teclado Mecánico RGB', 'Teclado mecánico retroiluminado para gaming', 'PRODUCTO', 'Accesorios', 85.00, 60.00, 'Unidad', 20.00, 5.00, 'SI', 'SI'),
+            ('PROD-004', 'Monitor LED 24 pulgadas', 'Monitor Full HD 1920x1080, HDMI y VGA', 'PRODUCTO', 'Electrónica', 180.00, 130.00, 'Unidad', 12.00, 3.00, 'SI', 'SI'),
+            ('PROD-005', 'Impresora Multifuncional HP', 'Impresora, escáner y copiadora, WiFi', 'PRODUCTO', 'Electrónica', 220.00, 170.00, 'Unidad', 8.00, 2.00, 'SI', 'SI'),
+            ('PROD-006', 'Cable HDMI 2m', 'Cable HDMI 2.0 de alta velocidad', 'PRODUCTO', 'Accesorios', 12.00, 7.00, 'Unidad', 100.00, 20.00, 'SI', 'SI'),
+            ('PROD-007', 'Disco Duro Externo 1TB', 'Disco duro portátil USB 3.0', 'PRODUCTO', 'Almacenamiento', 65.00, 45.00, 'Unidad', 25.00, 5.00, 'SI', 'SI'),
+            ('PROD-008', 'Memoria USB 32GB', 'Memoria flash USB 3.0', 'PRODUCTO', 'Almacenamiento', 15.00, 10.00, 'Unidad', 75.00, 15.00, 'SI', 'SI'),
+            ('PROD-009', 'Silla Ergonómica de Oficina', 'Silla con soporte lumbar y brazos ajustables', 'PRODUCTO', 'Mobiliario', 150.00, 100.00, 'Unidad', 10.00, 3.00, 'SI', 'SI'),
+            ('PROD-010', 'Escritorio Ejecutivo', 'Escritorio de madera 1.60m x 0.80m', 'PRODUCTO', 'Mobiliario', 280.00, 200.00, 'Unidad', 5.00, 1.00, 'SI', 'SI'),
+            
+            -- SERVICIOS
+            ('SERV-002', 'Mantenimiento Preventivo PC', 'Limpieza, optimización y actualización de software', 'SERVICIO', 'Soporte Técnico', 35.00, NULL, 'Servicio', NULL, NULL, 'SI', 'SI'),
+            ('SERV-003', 'Instalación de Software', 'Instalación y configuración de programas', 'SERVICIO', 'Soporte Técnico', 25.00, NULL, 'Servicio', NULL, NULL, 'SI', 'SI'),
+            ('SERV-004', 'Reparación de Hardware', 'Diagnóstico y reparación de componentes', 'SERVICIO', 'Soporte Técnico', 45.00, NULL, 'Hora', NULL, NULL, 'SI', 'SI'),
+            ('SERV-005', 'Diseño Gráfico', 'Diseño de logos, flyers y material publicitario', 'SERVICIO', 'Diseño', 75.00, NULL, 'Hora', NULL, NULL, 'SI', 'SI'),
+            ('SERV-006', 'Desarrollo Web', 'Desarrollo de sitios web responsivos', 'SERVICIO', 'Desarrollo', 60.00, NULL, 'Hora', NULL, NULL, 'SI', 'SI'),
+            ('SERV-007', 'Capacitación Office', 'Capacitación en Microsoft Office (Word, Excel, PowerPoint)', 'SERVICIO', 'Capacitación', 40.00, NULL, 'Hora', NULL, NULL, 'SI', 'SI'),
+            ('SERV-008', 'Backup y Recuperación', 'Servicio de respaldo y recuperación de datos', 'SERVICIO', 'Soporte Técnico', 55.00, NULL, 'Servicio', NULL, NULL, 'SI', 'SI');
+        
+        RAISE NOTICE 'Productos y servicios de ejemplo insertados (17 registros)';
+    END IF;
+END $$;
+
+-- Insertar transacciones de ejemplo (solo si no existen transacciones)
+DO $$
+DECLARE
+    v_periodo_id INTEGER;
+    v_trans_venta_1 INTEGER;
+    v_trans_venta_2 INTEGER;
+    v_trans_compra INTEGER;
+    v_trans_gasto INTEGER;
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.transacciones LIMIT 1) THEN
+        -- Obtener el período de 2025
+        SELECT id_periodo INTO v_periodo_id 
+        FROM public.periodos_contables 
+        WHERE fecha_inicio = '2025-01-01' AND tipo_periodo = 'ANUAL' 
+        LIMIT 1;
+        
+        -- Transacción de VENTA 1
+        INSERT INTO public.transacciones 
+        (fecha_transaccion, descripcion, tipo, categoria, moneda, fecha_creacion, usuario_creacion, id_periodo)
+        VALUES 
+        ('2025-01-15 10:30:00', 'Venta de equipos de cómputo a Empresa ABC', 'INGRESO', 'VENTA', 'USD', CURRENT_TIMESTAMP, 'admin', v_periodo_id)
+        RETURNING id_transaccion INTO v_trans_venta_1;
+        
+        -- Transacción de VENTA 2
+        INSERT INTO public.transacciones 
+        (fecha_transaccion, descripcion, tipo, categoria, moneda, fecha_creacion, usuario_creacion, id_periodo)
+        VALUES 
+        ('2025-01-20 14:15:00', 'Venta de servicios de mantenimiento', 'INGRESO', 'VENTA', 'USD', CURRENT_TIMESTAMP, 'admin', v_periodo_id)
+        RETURNING id_transaccion INTO v_trans_venta_2;
+        
+        -- Transacción de COMPRA
+        INSERT INTO public.transacciones 
+        (fecha_transaccion, descripcion, tipo, categoria, moneda, fecha_creacion, usuario_creacion, id_periodo)
+        VALUES 
+        ('2025-01-18 09:00:00', 'Compra de inventario de productos', 'EGRESO', 'COMPRA', 'USD', CURRENT_TIMESTAMP, 'admin', v_periodo_id)
+        RETURNING id_transaccion INTO v_trans_compra;
+        
+        -- Transacción de GASTO
+        INSERT INTO public.transacciones 
+        (fecha_transaccion, descripcion, tipo, categoria, moneda, fecha_creacion, usuario_creacion, id_periodo)
+        VALUES 
+        ('2025-01-22 11:45:00', 'Pago de servicios de energía eléctrica', 'EGRESO', 'SERVICIO', 'USD', CURRENT_TIMESTAMP, 'admin', v_periodo_id)
+        RETURNING id_transaccion INTO v_trans_gasto;
+        
+        -- Asientos para Venta 1 (partida doble: Debe en Caja, Haber en Ventas)
+        INSERT INTO public.asientos (id_transaccion, id_cuenta, debe, haber)
+        VALUES 
+            (v_trans_venta_1, (SELECT id_cuenta FROM public.catalogo_cuentas WHERE codigo_cuenta = '11010101'), 1800.00, 0.00),  -- Caja General (debe)
+            (v_trans_venta_1, (SELECT id_cuenta FROM public.catalogo_cuentas WHERE codigo_cuenta = '510102'), 0.00, 1800.00);    -- Ventas a contribuyentes (haber)
+        
+        -- Asientos para Venta 2
+        INSERT INTO public.asientos (id_transaccion, id_cuenta, debe, haber)
+        VALUES 
+            (v_trans_venta_2, (SELECT id_cuenta FROM public.catalogo_cuentas WHERE codigo_cuenta = '110102'), 350.00, 0.00),     -- Bancos (debe)
+            (v_trans_venta_2, (SELECT id_cuenta FROM public.catalogo_cuentas WHERE codigo_cuenta = '5102'), 0.00, 350.00);       -- Ingresos por servicios (haber)
+        
+        -- Asientos para Compra
+        INSERT INTO public.asientos (id_transaccion, id_cuenta, debe, haber)
+        VALUES 
+            (v_trans_compra, (SELECT id_cuenta FROM public.catalogo_cuentas WHERE codigo_cuenta = '110701'), 1200.00, 0.00),     -- Mercadería (debe)
+            (v_trans_compra, (SELECT id_cuenta FROM public.catalogo_cuentas WHERE codigo_cuenta = '110102'), 0.00, 1200.00);     -- Bancos (haber)
+        
+        -- Asientos para Gasto
+        INSERT INTO public.asientos (id_transaccion, id_cuenta, debe, haber)
+        VALUES 
+            (v_trans_gasto, (SELECT id_cuenta FROM public.catalogo_cuentas WHERE codigo_cuenta = '410421'), 150.00, 0.00),       -- Energía eléctrica (debe)
+            (v_trans_gasto, (SELECT id_cuenta FROM public.catalogo_cuentas WHERE codigo_cuenta = '11010101'), 0.00, 150.00);     -- Caja General (haber)
+        
+        RAISE NOTICE 'Transacciones y asientos de ejemplo insertados (4 transacciones, 8 asientos)';
+    END IF;
+END $$;
+
+-- Insertar facturas de ejemplo (solo si no existen facturas)
+-- NOTA: Las facturas se crean desde la aplicación web para evitar problemas de triggers
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.facturas LIMIT 1) THEN
+        RAISE NOTICE 'Las facturas se deben crear desde la aplicación web.';
+        RAISE NOTICE 'Use el módulo de Facturas para crear facturas con sus detalles.';
+    END IF;
+END $$;
+
+-- =============================================
 -- PASO 6: MIGRAR DATOS LEGACY DE FACTURAS (si existen)
 -- =============================================
 
@@ -897,7 +1221,9 @@ DECLARE
     v_total_detalles INTEGER;
     v_total_cuentas INTEGER;
     v_total_transacciones INTEGER;
+    v_total_asientos INTEGER;
     v_facturas_normalizadas INTEGER;
+    v_periodos INTEGER;
 BEGIN
     SELECT COUNT(*) INTO v_total_clientes FROM public.clientes;
     SELECT COUNT(*) INTO v_total_productos FROM public.productos_servicios;
@@ -905,23 +1231,39 @@ BEGIN
     SELECT COUNT(*) INTO v_total_detalles FROM public.factura_detalle;
     SELECT COUNT(*) INTO v_total_cuentas FROM public.catalogo_cuentas;
     SELECT COUNT(*) INTO v_total_transacciones FROM public.transacciones;
+    SELECT COUNT(*) INTO v_total_asientos FROM public.asientos;
     SELECT COUNT(*) INTO v_facturas_normalizadas FROM public.facturas WHERE id_cliente IS NOT NULL;
+    SELECT COUNT(*) INTO v_periodos FROM public.periodos_contables;
     
     RAISE NOTICE '========================================';
-    RAISE NOTICE 'INICIALIZACIÓN Y MIGRACIÓN COMPLETADA';
+    RAISE NOTICE '✅ INICIALIZACIÓN Y MIGRACIÓN COMPLETADA';
     RAISE NOTICE '========================================';
-    RAISE NOTICE 'SISTEMA CONTABLE:';
-    RAISE NOTICE '  - Catálogo de Cuentas: % cuentas', v_total_cuentas;
-    RAISE NOTICE '  - Transacciones: %', v_total_transacciones;
     RAISE NOTICE '';
-    RAISE NOTICE 'SISTEMA DE FACTURACIÓN:';
-    RAISE NOTICE '  - Clientes: %', v_total_clientes;
-    RAISE NOTICE '  - Productos/Servicios: %', v_total_productos;
-    RAISE NOTICE '  - Facturas Totales: %', v_total_facturas;
-    RAISE NOTICE '  - Facturas Normalizadas: %', v_facturas_normalizadas;
-    RAISE NOTICE '  - Líneas de Detalle: %', v_total_detalles;
+    RAISE NOTICE '📊 SISTEMA CONTABLE:';
+    RAISE NOTICE '  ├─ Períodos Contables: %', v_periodos;
+    RAISE NOTICE '  ├─ Catálogo de Cuentas: % cuentas', v_total_cuentas;
+    RAISE NOTICE '  ├─ Transacciones: %', v_total_transacciones;
+    RAISE NOTICE '  └─ Asientos Contables: %', v_total_asientos;
+    RAISE NOTICE '';
+    RAISE NOTICE '💼 SISTEMA DE FACTURACIÓN:';
+    RAISE NOTICE '  ├─ Clientes: %', v_total_clientes;
+    RAISE NOTICE '  ├─ Productos/Servicios: %', v_total_productos;
+    RAISE NOTICE '  ├─ Facturas Totales: %', v_total_facturas;
+    RAISE NOTICE '  ├─ Facturas Normalizadas: %', v_facturas_normalizadas;
+    RAISE NOTICE '  └─ Líneas de Detalle: %', v_total_detalles;
+    RAISE NOTICE '';
     RAISE NOTICE '========================================';
-    RAISE NOTICE 'Base de datos lista para usar!';
+    
+    IF v_total_transacciones > 0 OR v_total_facturas > 0 THEN
+        RAISE NOTICE '💡 Datos de ejemplo incluidos para facilitar';
+        RAISE NOTICE '   pruebas y demostración del sistema.';
+    ELSE
+        RAISE NOTICE '💡 Base de datos lista para comenzar.';
+        RAISE NOTICE '   Agregue datos desde la aplicación.';
+    END IF;
+    
+    RAISE NOTICE '========================================';
+    RAISE NOTICE '✅ Base de datos lista para usar!';
     RAISE NOTICE '========================================';
 END $$;
 

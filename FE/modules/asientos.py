@@ -137,16 +137,8 @@ def create_asiento_form(backend_url: str, transaction_id: int, accounts: List[Di
             }
 
             try:
-                # 🔥 CAMBIO: Usar el endpoint con factura automática si es VENTA
-                categoria = transaccion_data.get('categoria', 'OTROS')
-
-                if categoria == "VENTA":
-                    # ✅ Usar endpoint con factura automática
-                    endpoint = f"{backend_url}/api/asientos/con-factura/{transaction_id}"
-                    st.info("📌 Usando endpoint con generación automática de factura (VENTA)")
-                else:
-                    # ❌ Usar endpoint normal
-                    endpoint = f"{backend_url}/api/asientos/"
+                # Usar endpoint simple - las facturas son independientes
+                endpoint = f"{backend_url}/api/asientos/"
 
                 response = requests.post(
                     endpoint,
@@ -159,11 +151,6 @@ def create_asiento_form(backend_url: str, transaction_id: int, accounts: List[Di
                     asiento_id = data.get("id_asiento")
 
                     st.success(f"✅ Asiento creado exitosamente (ID: {asiento_id})")
-
-                    # 🔥 MOSTRAR ÉXITO DE FACTURA
-                    if categoria == "VENTA":
-                        st.success("🧾 ¡Factura generada automáticamente!")
-
                     st.rerun()
                 else:
                     st.error(f"❌ Error al crear asiento: {response.text}")
